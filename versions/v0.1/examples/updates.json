@@ -1,0 +1,18 @@
+{
+  "sitectx_version": "0.1",
+  "site": "https://example.com",
+  "generated_at": "2026-05-31T18:30:00Z",
+  "updates": [
+    {
+      "id": "update:pricing:2026-05-31T18-25-00Z",
+      "type": "update",
+      "update_type": "price_changed",
+      "url": "https://example.com/pricing",
+      "summary": "Starter plan changed from $99/month to $129/month.",
+      "before": "$99/month",
+      "after": "$129/month",
+      "observed_at": "2026-05-31T18:25:00Z",
+      "evidence_url": "https://example.com/sitectx/evidence/pricing-2026-05-31T18-25-00Z.json"
+    }
+  ]
+}

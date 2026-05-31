@@ -1,0 +1,84 @@
+name: Human-owned PR
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  pull-requests: read
+  contents: read
+
+jobs:
+  check-human-accountability:
+    name: Check human accountability attestation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const login = pr.user?.login || "";
+            const loginLower = login.toLowerCase();
+            const failures = [];
+
+            const obviousBotAuthor =
+              /\[bot\]$/.test(loginLower) ||
+              /bot$/.test(loginLower) ||
+              /^(dependabot|renovate|github-actions)(\[bot\])?$/.test(loginLower);
+
+            if (obviousBotAuthor) {
+              failures.push(
+                `PR author '${login}' appears to be a bot account. SiteCTX accepts human-accountable pull requests; please have an accountable human contributor open the PR.`
+              );
+            }
+
+            const normalize = (value) =>
+              value
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim()
+                .replace(/\s+/g, " ");
+
+            const checkedItems = (pr.body || "")
+              .split(/\r?\n/)
+              .map((line) => line.match(/^\s*[-*]\s*\[[xX]\]\s*(.+?)\s*$/))
+              .filter(Boolean)
+              .map((match) => normalize(match[1]));
+
+            const requiredAttestations = [
+              "I am a human contributor responsible for this PR.",
+              "I reviewed the full diff before submitting.",
+              "I can explain why this change belongs in SiteCTX.",
+              "This PR is not an autonomous bot/agent submission."
+            ];
+
+            const missing = requiredAttestations.filter((attestation) => {
+              const required = normalize(attestation);
+              return !checkedItems.some((item) => item.includes(required));
+            });
+
+            if (missing.length > 0) {
+              failures.push(
+                [
+                  "The PR body is missing checked human-accountability checklist items.",
+                  "Please use the pull request template and check these items after reviewing the final diff:",
+                  ...missing.map((item) => `- ${item}`)
+                ].join("\n")
+              );
+            }
+
+            if (failures.length > 0) {
+              core.setFailed(
+                [
+                  "This metadata check enforces SiteCTX's human-accountable contribution process. It does not prove whether any person is human.",
+                  "",
+                  ...failures
+                ].join("\n")
+              );
+            }

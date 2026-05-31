@@ -1,0 +1,14 @@
+{
+  "sitectx_version": "0.1",
+  "site": "https://example.com",
+  "generated_at": "2026-05-31T18:30:00Z",
+  "evidence": [
+    {
+      "id": "evidence:pricing:2026-05-31T18-25-00Z",
+      "url": "https://example.com/sitectx/evidence/pricing-2026-05-31T18-25-00Z.json",
+      "source_url": "https://example.com/pricing",
+      "observed_at": "2026-05-31T18:25:00Z",
+      "summary": "Public evidence record for the observed pricing page."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "page:service",
+  "type": "page",
+  "url": "https://www.rivertonbikes.example/service/",
+  "source_url": "https://www.rivertonbikes.example/service/",
+  "observed_at": "2026-05-31T16:20:00Z",
+  "title": "Bike Service and Repair",
+  "summary": "Repair menu, turnaround estimates, tune-up packages, and booking details.",
+  "page_role": "service",
+  "language": "en",
+  "updated_at": "2026-05-30T18:15:00Z",
+  "source_urls": [
+    "https://www.rivertonbikes.example/service/",
+    "https://www.rivertonbikes.example/service/tune-ups/"
+  ]
+}

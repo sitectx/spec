@@ -1,0 +1,112 @@
+{
+  "sitectx_version": "0.1",
+  "site": {
+    "url": "https://www.rivertonbikes.example/",
+    "name": "Riverton Bikes",
+    "description": "Independent bicycle shop with service, rentals, and local ride updates.",
+    "language": "en",
+    "same_as": [
+      "https://www.instagram.com/rivertonbikes.example"
+    ]
+  },
+  "freshness": {
+    "status": "fresh",
+    "generated_at": "2026-05-31T16:30:00Z",
+    "expires_at": "2026-06-01T16:30:00Z",
+    "next_update_at": "2026-06-01T10:00:00Z"
+  },
+  "resources": {
+    "self": "https://www.rivertonbikes.example/.well-known/sitectx",
+    "updates": "https://www.rivertonbikes.example/sitectx/updates.ndjson",
+    "updates_json": "https://www.rivertonbikes.example/sitectx/updates.json",
+    "evidence": "https://www.rivertonbikes.example/sitectx/evidence.json"
+  },
+  "publisher": {
+    "name": "Riverton Bikes CMS",
+    "url": "https://www.rivertonbikes.example/"
+  },
+  "source_urls": [
+    "https://www.rivertonbikes.example/sitemap.xml",
+    "https://www.rivertonbikes.example/blog/",
+    "https://www.rivertonbikes.example/service/"
+  ],
+  "feeds": [
+    {
+      "type": "updates",
+      "format": "ndjson",
+      "url": "https://www.rivertonbikes.example/sitectx/updates.ndjson",
+      "title": "Riverton Bikes updates",
+      "last_modified": "2026-05-31T16:25:00Z"
+    }
+  ],
+  "records": [
+    {
+      "id": "page:service",
+      "type": "page",
+      "url": "https://www.rivertonbikes.example/service/",
+      "observed_at": "2026-05-31T16:20:00Z",
+      "title": "Bike Service and Repair",
+      "summary": "Repair menu, turnaround estimates, tune-up packages, and booking details.",
+      "page_role": "service",
+      "updated_at": "2026-05-30T18:15:00Z",
+      "source_urls": [
+        "https://www.rivertonbikes.example/service/",
+        "https://www.rivertonbikes.example/service/tune-ups/"
+      ]
+    },
+    {
+      "id": "entity:shop",
+      "type": "entity",
+      "url": "https://www.rivertonbikes.example/about/",
+      "source_url": "https://www.rivertonbikes.example/about/",
+      "observed_at": "2026-05-31T16:20:00Z",
+      "name": "Riverton Bikes",
+      "entity_type": "organization",
+      "description": "A local bicycle shop serving commuters, road riders, and families.",
+      "same_as": [
+        "https://www.instagram.com/rivertonbikes.example"
+      ],
+      "attributes": {
+        "locality": "Riverton",
+        "region": "OR"
+      }
+    },
+    {
+      "id": "offer:spring-tune-2026",
+      "type": "offer",
+      "url": "https://www.rivertonbikes.example/service/spring-tune-up/",
+      "source_url": "https://www.rivertonbikes.example/service/spring-tune-up/",
+      "observed_at": "2026-05-31T16:22:00Z",
+      "name": "Spring Tune-Up Package",
+      "summary": "Seasonal tune-up package for commuter and road bikes.",
+      "price": "89.00",
+      "currency": "USD",
+      "availability": "in_stock",
+      "valid_from": "2026-03-01T00:00:00Z",
+      "valid_until": "2026-06-30T23:59:59Z",
+      "terms_url": "https://www.rivertonbikes.example/service/spring-tune-up/"
+    },
+    {
+      "id": "update:holiday-hours-2026-05-31",
+      "type": "update",
+      "url": "https://www.rivertonbikes.example/blog/memorial-weekend-hours/",
+      "source_url": "https://www.rivertonbikes.example/blog/memorial-weekend-hours/",
+      "evidence_url": "https://www.rivertonbikes.example/sitectx/evidence/holiday-hours-2026-05-31.json",
+      "observed_at": "2026-05-31T16:25:00Z",
+      "title": "Memorial Weekend Service Hours",
+      "summary": "The service desk closes early on Sunday and reopens Tuesday morning.",
+      "published_at": "2026-05-29T15:00:00Z",
+      "updated_at": "2026-05-31T16:00:00Z",
+      "category": "hours",
+      "severity": "notice",
+      "tags": [
+        "hours",
+        "service"
+      ]
+    }
+  ],
+  "x_riverton_inventory_snapshot": {
+    "generated_by": "inventory-exporter",
+    "bicycle_models_count": 42
+  }
+}

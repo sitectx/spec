@@ -1,0 +1,320 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sitectx.org/versions/v0.1/schema/sitectx.schema.json",
+  "title": "SiteCTX v0.1 Manifest",
+  "description": "A SiteCTX v0.1 manifest for publishing structured, freshness-aware website context.",
+  "type": "object",
+  "required": [
+    "sitectx_version",
+    "site",
+    "freshness",
+    "records"
+  ],
+  "properties": {
+    "sitectx_version": {
+      "const": "0.1",
+      "description": "SiteCTX version identifier."
+    },
+    "site": {
+      "$ref": "#/$defs/site"
+    },
+    "freshness": {
+      "$ref": "#/$defs/freshness"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    },
+    "resources": {
+      "$ref": "#/$defs/resources"
+    },
+    "feeds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/feed"
+      }
+    },
+    "source_urls": {
+      "$ref": "#/$defs/urlArray"
+    },
+    "publisher": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "contact": {
+          "type": "string"
+        }
+      }
+    },
+    "license": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "additionalProperties": true
+        }
+      ]
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "site": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "same_as": {
+          "$ref": "#/$defs/urlArray"
+        }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "required": [
+        "status",
+        "generated_at"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "fresh",
+            "stale",
+            "unknown",
+            "error"
+          ]
+        },
+        "generated_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "next_update_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "checked_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "error_message": {
+          "type": "string"
+        }
+      }
+    },
+    "feed": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "format": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "last_modified": {
+          "$ref": "#/$defs/dateTime"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "self": {
+          "type": "string",
+          "format": "uri"
+        },
+        "updates": {
+          "type": "string",
+          "format": "uri"
+        },
+        "updates_json": {
+          "type": "string",
+          "format": "uri"
+        },
+        "evidence": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "observed_at"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "source_url"
+          ]
+        }
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "page",
+            "entity",
+            "offer",
+            "update"
+          ]
+        },
+        "observed_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "source_urls": {
+          "$ref": "#/$defs/urlArray"
+        },
+        "evidence_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updated_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "page_role": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "same_as": {
+          "$ref": "#/$defs/urlArray"
+        },
+        "image": {
+          "type": "string",
+          "format": "uri"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "price": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "availability": {
+          "type": "string"
+        },
+        "valid_from": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "valid_until": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "terms_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "seller": {
+          "type": "string"
+        },
+        "item_id": {
+          "type": "string"
+        },
+        "published_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "category": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        }
+      }
+    },
+    "urlArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

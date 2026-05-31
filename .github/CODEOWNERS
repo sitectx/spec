@@ -1,0 +1,13 @@
+# SiteCTX spec governance
+
+* @sitectx/maintainers
+
+/versions/ @sitectx/spec-maintainers
+/versions/v0.1/SPEC.md @sitectx/spec-maintainers
+/versions/v0.1/schema/ @sitectx/spec-maintainers
+/versions/v0.1/conformance.md @sitectx/spec-maintainers
+
+/GOVERNANCE.md @sitectx/maintainers
+/SECURITY.md @sitectx/maintainers
+/CONTRIBUTING.md @sitectx/maintainers
+/.github/ @sitectx/maintainers
