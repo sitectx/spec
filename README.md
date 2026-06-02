@@ -70,6 +70,72 @@ purposes.
 - [versions/v0.1/examples](versions/v0.1/examples): sample manifests, update
   streams, public evidence resources, and record documents
 
+## SiteCTX CLI
+
+This repository includes a Node.js CLI package for creating and checking
+SiteCTX artifacts. It is intended as a developer on-ramp for the draft spec and
+is not published to npm from this repository.
+
+```bash
+npm install
+npm test
+node ./bin/sitectx.js --help
+node ./bin/sitectx.js init --root ./demo --site-url https://example.com --name "Example Site"
+node ./bin/sitectx.js validate --root ./demo
+node ./bin/sitectx.js doctor --root ./demo
+node ./bin/sitectx.js inspect --root ./demo
+```
+
+The CLI generates these public artifacts:
+
+```text
+/.well-known/sitectx
+/sitectx.json
+/updates.json
+/updates.ndjson
+```
+
+It also creates the local source config:
+
+```text
+/sitectx.config.json
+```
+
+Available commands:
+
+```bash
+node ./bin/sitectx.js init
+node ./bin/sitectx.js generate
+node ./bin/sitectx.js build
+node ./bin/sitectx.js validate
+node ./bin/sitectx.js doctor
+node ./bin/sitectx.js inspect
+node ./bin/sitectx.js version
+```
+
+After npm publication, users will be able to run:
+
+```bash
+npx sitectx doctor --url https://example.com
+```
+
+Pre-publish package testing:
+
+```bash
+npm pack --dry-run
+npm pack
+
+TMPDIR="$(mktemp -d)"
+cd "$TMPDIR"
+npm init -y
+npm install /absolute/path/to/sitectx-0.1.0.tgz
+npx sitectx --help
+npx sitectx init --root ./demo --site-url https://example.com --name "Example Site" --force
+npx sitectx validate --root ./demo
+npx sitectx doctor --root ./demo
+npx sitectx inspect --root ./demo
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [GOVERNANCE.md](GOVERNANCE.md) before

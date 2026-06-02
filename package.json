@@ -1,0 +1,35 @@
+{
+  "name": "sitectx",
+  "version": "0.1.0",
+  "description": "Developer CLI and draft specification for SiteCTX website context artifacts.",
+  "type": "module",
+  "bin": {
+    "sitectx": "./bin/sitectx.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "src",
+    "versions",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "scripts": {
+    "cli": "node ./bin/sitectx.js",
+    "doctor": "node ./bin/sitectx.js doctor --root .",
+    "validate": "node ./bin/sitectx.js validate --root .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.9"
+  }
+}

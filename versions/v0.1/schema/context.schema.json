@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sitectx.org/versions/v0.1/schema/context.schema.json",
+  "title": "SiteCTX v0.1 Context Snapshot",
+  "type": "object",
+  "required": [
+    "sitectx_version",
+    "site",
+    "freshness",
+    "records"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "sitectx_version": {
+      "const": "0.1"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "sitectx.context"
+      ]
+    },
+    "site": {
+      "$ref": "#/$defs/site"
+    },
+    "publisher": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "freshness": {
+      "$ref": "#/$defs/freshness"
+    },
+    "generatedAt": {
+      "$ref": "#/$defs/dateTime"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/section"
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "feeds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "site": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "language": {
+          "type": "string",
+          "maxLength": 35
+        }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "required": [
+        "status",
+        "generated_at"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "fresh",
+            "stale",
+            "unknown",
+            "error"
+          ]
+        },
+        "generated_at": {
+          "$ref": "#/$defs/dateTime"
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "url"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "observed_at"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "source_url"
+          ]
+        }
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "page",
+            "entity",
+            "offer",
+            "update"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      }
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sitectx.org/versions/v0.1/schema/updates.schema.json",
+  "title": "SiteCTX v0.1 JSON Update Feed",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "kind",
+    "site",
+    "generatedAt",
+    "updates"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "sitectx.updates"
+    },
+    "site": {
+      "$ref": "#/$defs/site"
+    },
+    "generatedAt": {
+      "$ref": "#/$defs/dateTime"
+    },
+    "updates": {
+      "type": "array",
+      "items": {
+        "$ref": "update.schema.json"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "site": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

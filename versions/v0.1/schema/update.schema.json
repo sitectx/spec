@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sitectx.org/versions/v0.1/schema/update.schema.json",
+  "title": "SiteCTX v0.1 Update Record",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "url",
+    "title",
+    "publishedAt"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "enum": [
+        "sitectx.update"
+      ]
+    },
+    "siteUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": true
+}
