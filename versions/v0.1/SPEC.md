@@ -70,12 +70,20 @@ Optional aliases are:
 
 ```text
 /.well-known/sitectx.json
-/sitectx.json
 ```
 
 The discovery endpoint SHOULD return the SiteCTX manifest JSON. Optional aliases
 SHOULD return the same manifest as the preferred endpoint, or redirect to the
 canonical manifest URL using normal HTTP redirects.
+
+The conventional current context snapshot path is:
+
+```text
+/sitectx.json
+```
+
+`/sitectx.json` is not a manifest alias. It is a linked context snapshot that
+the discovery manifest MAY point to.
 
 The manifest is the SiteCTX entry point and index. It MAY link to additional
 SiteCTX resources. Updates and evidence resources are optional linked resources;

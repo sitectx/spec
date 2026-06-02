@@ -7,6 +7,7 @@ describe("CLI help and version", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("init");
+    expect(result.stdout).toContain("discover");
     expect(result.stdout).toContain("generate");
     expect(result.stdout).toContain("validate");
     expect(result.stdout).toContain("doctor");

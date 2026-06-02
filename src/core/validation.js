@@ -55,6 +55,43 @@ export async function validateLocalArtifacts(options = {}) {
   const raw = {};
   const { validators } = await getValidators();
 
+  if (!options.updates) {
+    const canonicalExists = await fileExists(paths.updates);
+    const legacyExists = await fileExists(defaults.legacyUpdates);
+    if (!canonicalExists && legacyExists) {
+      paths.updates = defaults.legacyUpdates;
+      collector.warn(
+        "updates.legacy",
+        "updates.json",
+        "Using legacy root-level updates.json fallback. Publish updates at sitectx/updates.json."
+      );
+    } else if (canonicalExists && legacyExists) {
+      collector.warn(
+        "updates.legacy",
+        "updates.json",
+        "Legacy root-level updates.json was found but ignored. Canonical path is sitectx/updates.json."
+      );
+    }
+  }
+  if (!options.ndjson) {
+    const canonicalExists = await fileExists(paths.ndjson);
+    const legacyExists = await fileExists(defaults.legacyNdjson);
+    if (!canonicalExists && legacyExists) {
+      paths.ndjson = defaults.legacyNdjson;
+      collector.warn(
+        "ndjson.legacy",
+        "updates.ndjson",
+        "Using legacy root-level updates.ndjson fallback. Publish updates at sitectx/updates.ndjson."
+      );
+    } else if (canonicalExists && legacyExists) {
+      collector.warn(
+        "ndjson.legacy",
+        "updates.ndjson",
+        "Legacy root-level updates.ndjson was found but ignored. Canonical path is sitectx/updates.ndjson."
+      );
+    }
+  }
+
   parsed.manifest = await readJsonArtifact({
     collector,
     root,
@@ -62,6 +99,33 @@ export async function validateLocalArtifacts(options = {}) {
     key: "manifest",
     validator: validators.manifest
   });
+  const manifestAliasPath = path.resolve(defaults.manifestAlias);
+  if (await fileExists(manifestAliasPath)) {
+    parsed.manifestAlias = await readJsonArtifact({
+      collector,
+      root,
+      filePath: manifestAliasPath,
+      key: "manifestAlias",
+      validator: validators.manifest
+    });
+    if (parsed.manifest && parsed.manifestAlias) {
+      const preferred = JSON.stringify(parsed.manifest);
+      const alias = JSON.stringify(parsed.manifestAlias);
+      if (preferred === alias) {
+        collector.pass(
+          "manifestAlias.match",
+          ".well-known/sitectx.json",
+          "Optional manifest alias matches .well-known/sitectx."
+        );
+      } else {
+        collector.fail(
+          "manifestAlias.match",
+          ".well-known/sitectx.json",
+          "Optional manifest alias does not match .well-known/sitectx."
+        );
+      }
+    }
+  }
   parsed.context = await readJsonArtifact({
     collector,
     root,
@@ -79,10 +143,10 @@ export async function validateLocalArtifacts(options = {}) {
 
   const ndjsonTarget = displayPath(root, paths.ndjson);
   if (!(await fileExists(paths.ndjson))) {
-    collector.fail("ndjson.exists", ndjsonTarget, "updates.ndjson is missing.");
+    collector.fail("ndjson.exists", ndjsonTarget, `${ndjsonTarget} is missing.`);
   } else {
     raw.ndjson = await readUtf8(paths.ndjson);
-    collector.pass("ndjson.exists", ndjsonTarget, "updates.ndjson exists.");
+    collector.pass("ndjson.exists", ndjsonTarget, `${ndjsonTarget} exists.`);
     const parsedNdjson = parseNdjson(raw.ndjson);
     if (parsedNdjson.errors.length > 0) {
       for (const error of parsedNdjson.errors) {
@@ -93,10 +157,10 @@ export async function validateLocalArtifacts(options = {}) {
         );
       }
     } else {
-      collector.pass("ndjson.parse", ndjsonTarget, "updates.ndjson parsed successfully.");
+      collector.pass("ndjson.parse", ndjsonTarget, `${ndjsonTarget} parsed successfully.`);
     }
     if (parsedNdjson.records.length === 0) {
-      collector.warn("ndjson.empty", ndjsonTarget, "updates.ndjson is empty.");
+      collector.warn("ndjson.empty", ndjsonTarget, `${ndjsonTarget} is empty.`);
     }
     for (const record of parsedNdjson.records) {
       validateWithSchema({
@@ -124,8 +188,9 @@ export async function validateLocalArtifacts(options = {}) {
     addSecretChecks(collector, displayPath(root, paths.context), parsed.context);
   }
   if (parsed.updates) {
-    validateUniqueField(collector, "updates.ids", "updates.json", parsed.updates.updates, "id", "Update IDs are unique.");
-    validateStringLengths(collector, "updates.json", parsed.updates);
+    const updatesTarget = displayPath(root, paths.updates);
+    validateUniqueField(collector, "updates.ids", updatesTarget, parsed.updates.updates, "id", "Update IDs are unique.");
+    validateStringLengths(collector, updatesTarget, parsed.updates);
     addSecretChecks(collector, displayPath(root, paths.updates), parsed.updates);
   }
 
@@ -175,13 +240,17 @@ export function validateWithSchema({ collector, root, filePath, key, validator, 
 async function validateManifestLinks({ collector, root, manifest }) {
   const links = [
     ["context", manifest.context?.url, "sitectx.json"],
-    ["updates", manifest.updates?.url, "updates.json"],
-    ["updatesNdjson", manifest.updatesNdjson?.url, "updates.ndjson"]
+    ["updates", manifest.updates?.url, "sitectx/updates.json"],
+    ["updatesNdjson", manifest.updatesNdjson?.url, "sitectx/updates.ndjson"],
+    ["evidence", manifest.evidence?.url, "sitectx/evidence.json", true]
   ];
 
-  for (const [name, link, expectedFile] of links) {
+  for (const [name, link, expectedFile, optional] of links) {
     const target = ".well-known/sitectx";
     if (!link) {
+      if (optional) {
+        continue;
+      }
       collector.fail(`manifest.${name}.url`, target, `Manifest ${name} URL is missing.`);
       continue;
     }
@@ -192,7 +261,7 @@ async function validateManifestLinks({ collector, root, manifest }) {
         `manifest.${name}.relative`,
         target,
         `Manifest ${name} URL is not a root-relative URL: ${link}`,
-        "Root-relative URLs such as /sitectx.json are easier to relocate."
+        "Root-relative URLs such as /sitectx/updates.json are easier to relocate."
       );
     }
     const resolved = resolvePublicPath(root, link);

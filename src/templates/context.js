@@ -30,21 +30,21 @@ export function createContext(config, generatedAt) {
     resources: {
       manifest: absoluteUrl(config.siteUrl, "/.well-known/sitectx"),
       self: absoluteUrl(config.siteUrl, "/sitectx.json"),
-      updates_json: absoluteUrl(config.siteUrl, "/updates.json"),
-      updates: absoluteUrl(config.siteUrl, "/updates.ndjson")
+      updates_json: absoluteUrl(config.siteUrl, "/sitectx/updates.json"),
+      updates: absoluteUrl(config.siteUrl, "/sitectx/updates.ndjson")
     },
     feeds: [
       {
         type: "updates",
         format: "json",
-        url: absoluteUrl(config.siteUrl, "/updates.json"),
+        url: absoluteUrl(config.siteUrl, "/sitectx/updates.json"),
         title: `${config.name} updates`,
         last_modified: generatedAt
       },
       {
         type: "updates",
         format: "ndjson",
-        url: absoluteUrl(config.siteUrl, "/updates.ndjson"),
+        url: absoluteUrl(config.siteUrl, "/sitectx/updates.ndjson"),
         title: `${config.name} update stream`,
         last_modified: generatedAt
       }

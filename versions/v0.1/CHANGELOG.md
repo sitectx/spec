@@ -4,8 +4,9 @@
 
 Initial draft specification.
 
-- Defines discovery at `/.well-known/sitectx` with alternate endpoints
-  `/.well-known/sitectx.json` and `/sitectx.json`.
+- Defines discovery at `/.well-known/sitectx` with optional manifest alias
+  `/.well-known/sitectx.json`.
+- Defines `/sitectx.json` as the conventional current context snapshot path.
 - Defines required top-level fields: `sitectx_version`, `site`, `freshness`, and
   `records`.
 - Defines freshness statuses: `fresh`, `stale`, `unknown`, and `error`.

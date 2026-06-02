@@ -8,9 +8,10 @@ import { createNdjsonUpdates, createUpdates } from "../templates/updates.js";
 
 export const GENERATED_ARTIFACTS = [
   ".well-known/sitectx",
+  ".well-known/sitectx.json",
   "sitectx.json",
-  "updates.json",
-  "updates.ndjson"
+  "sitectx/updates.json",
+  "sitectx/updates.ndjson"
 ];
 
 export const ALL_INIT_FILES = [
@@ -38,17 +39,22 @@ export function buildArtifacts(config, options = {}) {
         data: manifest
       },
       {
+        relativePath: ".well-known/sitectx.json",
+        content: stableJson(manifest),
+        data: manifest
+      },
+      {
         relativePath: "sitectx.json",
         content: stableJson(context),
         data: context
       },
       {
-        relativePath: "updates.json",
+        relativePath: "sitectx/updates.json",
         content: stableJson(updates),
         data: updates
       },
       {
-        relativePath: "updates.ndjson",
+        relativePath: "sitectx/updates.ndjson",
         content: stringifyNdjson(ndjsonUpdates),
         data: ndjsonUpdates
       }

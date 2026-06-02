@@ -80,6 +80,7 @@ is not published to npm from this repository.
 npm install
 npm test
 node ./bin/sitectx.js --help
+node ./bin/sitectx.js discover --url https://example.com --out sitectx.config.draft.json
 node ./bin/sitectx.js init --root ./demo --site-url https://example.com --name "Example Site"
 node ./bin/sitectx.js validate --root ./demo
 node ./bin/sitectx.js doctor --root ./demo
@@ -90,9 +91,11 @@ The CLI generates these public artifacts:
 
 ```text
 /.well-known/sitectx
+/.well-known/sitectx.json
 /sitectx.json
-/updates.json
-/updates.ndjson
+/sitectx/updates.json
+/sitectx/updates.ndjson
+/sitectx/evidence.json  (optional evidence index)
 ```
 
 It also creates the local source config:
@@ -105,6 +108,7 @@ Available commands:
 
 ```bash
 node ./bin/sitectx.js init
+node ./bin/sitectx.js discover
 node ./bin/sitectx.js generate
 node ./bin/sitectx.js build
 node ./bin/sitectx.js validate
@@ -112,6 +116,53 @@ node ./bin/sitectx.js doctor
 node ./bin/sitectx.js inspect
 node ./bin/sitectx.js version
 ```
+
+### Discovery Workflow
+
+`sitectx discover` creates a review-required draft config from real pages fetched
+from a bounded same-origin crawl:
+
+```bash
+node ./bin/sitectx.js discover --url https://example.com --out sitectx.config.draft.json
+```
+
+Discovery is deterministic. It does not call AI services, model APIs, browser
+automation, `wget`, or `curl`. It extracts source page metadata, short redacted
+excerpts, candidate FAQ, candidate claims, source pages, provenance, and
+freshness metadata into a draft config. It does not infer canonical truth.
+Candidate facts, claims, FAQ, and page summaries are marked for review and stay
+under `discoveryCandidates` until a human promotes them.
+
+Review and edit the draft before publishing:
+
+```bash
+# review/edit sitectx.config.draft.json first
+node ./bin/sitectx.js generate --config sitectx.config.draft.json --out public --force
+node ./bin/sitectx.js validate --root public
+node ./bin/sitectx.js doctor --root public
+```
+
+Unreviewed discovery drafts contain:
+
+```json
+{
+  "discovery": {
+    "status": "draft_review_required"
+  }
+}
+```
+
+`generate` refuses those drafts by default. After review, set
+`discovery.status` to `"reviewed"`. A draft can be generated explicitly with
+`--allow-draft`, but review is recommended:
+
+```bash
+node ./bin/sitectx.js generate --config sitectx.config.draft.json --out public --allow-draft --force
+```
+
+Discovery is intended for your own sites or sites you are authorized to inspect.
+SiteCTX is not a crawler permission system, model training license, legal
+certification, or ranking guarantee.
 
 After npm publication, users will be able to run:
 

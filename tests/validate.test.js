@@ -41,7 +41,7 @@ describe("validate", () => {
   it("validate catches malformed NDJSON", async () => {
     const root = await makeTempRoot();
     expect(runCli(["init", "--root", root]).status).toBe(0);
-    await fs.writeFile(path.join(root, "updates.ndjson"), "{\"id\":\"ok\"}\nnot-json\n", "utf8");
+    await fs.writeFile(path.join(root, "sitectx", "updates.ndjson"), "{\"id\":\"ok\"}\nnot-json\n", "utf8");
 
     const result = runCli(["validate", "--root", root]);
 
@@ -64,15 +64,15 @@ describe("validate", () => {
     expect(runCli(["init", "--root", root]).status).toBe(0);
     const contextPath = path.join(root, "sitectx.json");
     const context = await readJson(contextPath);
-    context.publisher.notes = "Use sk_live_1234567890abcdef for billing";
+    context.publisher.notes = "Use sessionid=fake-session-value for testing";
     await fs.writeFile(contextPath, JSON.stringify(context, null, 2), "utf8");
 
     const result = runCli(["validate", "--root", root]);
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("Possible secret detected");
-    expect(result.stdout).toContain("sk_live_****");
-    expect(result.stdout).not.toContain("1234567890abcdef");
+    expect(result.stdout).toContain("sessioni****");
+    expect(result.stdout).not.toContain("fake-session-value");
   });
 
   it("manifest link validation catches missing linked context file", async () => {
@@ -84,5 +84,28 @@ describe("validate", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("Manifest-linked file is missing: sitectx.json");
+  });
+
+  it("warns but validates legacy root-level update files as fallback", async () => {
+    const root = await makeTempRoot();
+    expect(runCli(["init", "--root", root]).status).toBe(0);
+    await fs.rename(path.join(root, "sitectx", "updates.json"), path.join(root, "updates.json"));
+    await fs.rename(path.join(root, "sitectx", "updates.ndjson"), path.join(root, "updates.ndjson"));
+    for (const manifestPath of [
+      path.join(root, ".well-known", "sitectx"),
+      path.join(root, ".well-known", "sitectx.json")
+    ]) {
+      const manifest = await readJson(manifestPath);
+      manifest.updates.url = "/updates.json";
+      manifest.updatesNdjson.url = "/updates.ndjson";
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+    }
+
+    const result = runCli(["validate", "--root", root]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Using legacy root-level updates.json fallback");
+    expect(result.stdout).toContain("Using legacy root-level updates.ndjson fallback");
+    expect(result.stdout).toContain("Manifest updates URL resolves to updates.json");
   });
 });

@@ -1,7 +1,7 @@
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS } from "../exit-codes.js";
 import { writeError, writeJson, writeLine } from "../output.js";
 import { buildInitFiles, toWritePlan } from "../../core/artifacts.js";
-import { fileExists, writeUtf8 } from "../../core/filesystem.js";
+import { artifactPaths, fileExists, removeFileIfExists, writeUtf8 } from "../../core/filesystem.js";
 
 export function registerInitCommand(program) {
   program
@@ -34,6 +34,9 @@ async function runInit(options) {
   }
 
   const result = emptyResult(true);
+  if (options.force && !options.dryRun) {
+    await removeLegacyUpdateArtifacts(options.root, result);
+  }
   for (const file of plan) {
     const exists = await fileExists(file.absolutePath);
     if (options.dryRun) {
@@ -62,6 +65,7 @@ function emptyResult(ok, errors = []) {
   return {
     ok,
     created: [],
+    removed: [],
     skipped: [],
     wouldCreate: [],
     errors
@@ -90,6 +94,11 @@ function printInitResult(result, options) {
       writeLine(`SKIP ${file}`);
     }
   }
+  if (result.removed.length > 0) {
+    for (const file of result.removed) {
+      writeLine(`REMOVE ${file}`);
+    }
+  }
   if (result.errors.length > 0) {
     for (const error of result.errors) {
       writeError(`ERROR ${error}`);
@@ -97,4 +106,14 @@ function printInitResult(result, options) {
   }
   writeLine();
   writeLine(result.ok ? "Result: PASS" : "Result: FAIL");
+}
+
+async function removeLegacyUpdateArtifacts(root, result) {
+  const paths = artifactPaths(root);
+  if (await removeFileIfExists(paths.legacyUpdates)) {
+    result.removed.push("updates.json");
+  }
+  if (await removeFileIfExists(paths.legacyNdjson)) {
+    result.removed.push("updates.ndjson");
+  }
 }

@@ -33,9 +33,10 @@ describe("generate", () => {
     expect(result.status).toBe(0);
     for (const file of [
       ".well-known/sitectx",
+      ".well-known/sitectx.json",
       "sitectx.json",
-      "updates.json",
-      "updates.ndjson"
+      "sitectx/updates.json",
+      "sitectx/updates.ndjson"
     ]) {
       await expect(fs.stat(path.join(outRoot, file))).resolves.toBeTruthy();
     }
@@ -76,7 +77,7 @@ describe("generate", () => {
 
     const manifest = await readJson(path.join(root, ".well-known/sitectx"));
     const context = await readJson(path.join(root, "sitectx.json"));
-    const updates = await readJson(path.join(root, "updates.json"));
+    const updates = await readJson(path.join(root, "sitectx", "updates.json"));
 
     expect(manifest.generatedAt).toMatch(isoDateTimePattern);
     expect(context.freshness.generated_at).toMatch(isoDateTimePattern);

@@ -31,6 +31,9 @@
     },
     "updatesNdjson": {
       "$ref": "#/$defs/link"
+    },
+    "evidence": {
+      "$ref": "#/$defs/link"
     }
   },
   "additionalProperties": true,

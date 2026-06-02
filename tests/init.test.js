@@ -5,9 +5,10 @@ import { makeTempRoot, readJson, runCli } from "./helpers.js";
 
 const generatedFiles = [
   ".well-known/sitectx",
+  ".well-known/sitectx.json",
   "sitectx.json",
-  "updates.json",
-  "updates.ndjson",
+  "sitectx/updates.json",
+  "sitectx/updates.ndjson",
   "sitectx.config.json"
 ];
 

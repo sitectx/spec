@@ -14,11 +14,18 @@ Optional aliases are:
 
 ```text
 /.well-known/sitectx.json
-/sitectx.json
 ```
 
 The manifest should be served as JSON and should return `application/json` where
 practical.
+
+The conventional current context snapshot path is:
+
+```text
+/sitectx.json
+```
+
+`/sitectx.json` is not a manifest alias.
 
 Optional conventional linked resources include:
 

@@ -33,7 +33,7 @@ const SECRET_PATTERNS = [
   },
   {
     name: "session cookie",
-    pattern: /sessionid=/i
+    pattern: /sessionid=[^\s;"']+/i
   },
   {
     name: "set-cookie header",
@@ -84,4 +84,15 @@ function redact(value) {
     return "****";
   }
   return `${compact.slice(0, Math.min(8, compact.length))}****`;
+}
+
+export function redactSecretsInString(value) {
+  if (typeof value !== "string" || value.length === 0) {
+    return value;
+  }
+  let redacted = value;
+  for (const detector of SECRET_PATTERNS) {
+    redacted = redacted.replace(detector.pattern, (match) => redact(match));
+  }
+  return redacted;
 }

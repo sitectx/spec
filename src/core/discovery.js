@@ -108,6 +108,7 @@ function summarizeInspection({ target, manifestLocation, manifest, context, upda
     contextUrl: manifest?.context?.url || context?.resources?.self || null,
     updatesUrl: manifest?.updates?.url || context?.resources?.updates_json || null,
     updatesNdjsonUrl: manifest?.updatesNdjson?.url || context?.resources?.updates || null,
+    evidenceUrl: manifest?.evidence?.url || context?.resources?.evidence || null,
     generatedAt: manifest?.generatedAt || context?.generatedAt || context?.freshness?.generated_at || null,
     sectionCount,
     updateCount,

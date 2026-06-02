@@ -126,6 +126,18 @@ export async function doctorRemote(options = {}) {
     validator: validators.update
   });
 
+  const evidenceUrl = resolveRemoteLink(normalized, manifest.evidence?.url);
+  if (evidenceUrl) {
+    await fetchAndValidateJson({
+      collector,
+      url: evidenceUrl,
+      label: "evidence",
+      required: false,
+      timeout,
+      validator: null
+    });
+  }
+
   return summarizeChecks(collector.checks, Boolean(options.strict));
 }
 
@@ -152,15 +164,17 @@ async function fetchAndValidateJson({ collector, url, label, required, timeout, 
   if (!value) {
     return;
   }
-  validateWithSchema({
-    collector,
-    root: ".",
-    filePath: ".",
-    key: label,
-    validator,
-    value,
-    targetOverride: url
-  });
+  if (validator) {
+    validateWithSchema({
+      collector,
+      root: ".",
+      filePath: ".",
+      key: label,
+      validator,
+      value,
+      targetOverride: url
+    });
+  }
   addSecretChecks(collector, url, value);
   addClaimChecks(collector, url, JSON.stringify(value));
 }

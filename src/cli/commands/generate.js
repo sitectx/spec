@@ -1,9 +1,9 @@
 import path from "node:path";
-import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS } from "../exit-codes.js";
+import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { writeError, writeJson, writeLine } from "../output.js";
 import { buildArtifacts, toWritePlan } from "../../core/artifacts.js";
 import { loadConfig } from "../../core/config.js";
-import { fileExists, resolveRoot, writeUtf8 } from "../../core/filesystem.js";
+import { artifactPaths, fileExists, removeFileIfExists, resolveRoot, writeUtf8 } from "../../core/filesystem.js";
 
 export function registerGenerateCommand(program) {
   const addGenerateCommand = (name, description) => {
@@ -15,10 +15,11 @@ export function registerGenerateCommand(program) {
       .option("--out <path>", "Output root for generated public artifacts.", ".")
       .option("--force", "Overwrite generated artifacts.")
       .option("--dry-run", "Show intended output without writing.")
+      .option("--allow-draft", "Generate from an unreviewed discovery draft.")
       .option("--json", "Print machine-readable output.")
       .action(async (options) => {
         const result = await runGenerate(options);
-        program._sitectxExitCode = result.ok ? EXIT_SUCCESS : EXIT_RUNTIME_ERROR;
+        program._sitectxExitCode = result.exitCode ?? (result.ok ? EXIT_SUCCESS : EXIT_RUNTIME_ERROR);
       });
   };
 
@@ -32,6 +33,8 @@ async function runGenerate(options) {
     created: [],
     skipped: [],
     wouldCreate: [],
+    removed: [],
+    warnings: [],
     errors: []
   };
   let plan;
@@ -40,8 +43,26 @@ async function runGenerate(options) {
     const root = resolveRoot(options.root);
     const configPath = path.resolve(root, options.config);
     const config = await loadConfig(configPath);
+    if (config.discovery?.status === "draft_review_required") {
+      if (!options.allowDraft) {
+        result.ok = false;
+        result.exitCode = EXIT_VALIDATION_FAILED;
+        result.errors.push(
+          "Discovered drafts require human review before generation. Edit the config and set discovery.status to \"reviewed\", or pass --allow-draft to generate anyway."
+        );
+        printGenerateResult(result, options);
+        return result;
+      }
+      result.warnings.push(
+        "Generating from an unreviewed discovery draft because --allow-draft was passed. Review is recommended before publishing."
+      );
+    }
     const artifacts = buildArtifacts(config);
-    plan = toWritePlan(path.resolve(root, options.out), artifacts.files);
+    const outRoot = path.resolve(root, options.out);
+    if (options.force && !options.dryRun) {
+      await removeLegacyUpdateArtifacts(outRoot, result);
+    }
+    plan = toWritePlan(outRoot, artifacts.files);
   } catch (error) {
     result.ok = false;
     result.errors.push(error.message);
@@ -89,9 +110,25 @@ function printGenerateResult(result, options) {
   for (const file of result.skipped) {
     writeLine(`SKIP ${file}`);
   }
+  for (const file of result.removed) {
+    writeLine(`REMOVE ${file}`);
+  }
+  for (const warning of result.warnings) {
+    writeLine(`WARN ${warning}`);
+  }
   for (const error of result.errors) {
     writeError(`ERROR ${error}`);
   }
   writeLine();
   writeLine(result.ok ? "Result: PASS" : "Result: FAIL");
+}
+
+async function removeLegacyUpdateArtifacts(root, result) {
+  const paths = artifactPaths(root);
+  if (await removeFileIfExists(paths.legacyUpdates)) {
+    result.removed.push("updates.json");
+  }
+  if (await removeFileIfExists(paths.legacyNdjson)) {
+    result.removed.push("updates.ndjson");
+  }
 }

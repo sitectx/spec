@@ -57,6 +57,17 @@
         "type": "object",
         "additionalProperties": true
       }
+    },
+    "sourcePages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": true
     }
   },
   "additionalProperties": true,

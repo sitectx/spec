@@ -21,7 +21,9 @@ A conforming v0.1 publisher:
   of `url` or `source_url`.
 - MUST use only `page`, `entity`, `offer`, or `update` for v0.1 record types.
 - SHOULD publish the manifest at `/.well-known/sitectx`.
-- MAY also publish at `/.well-known/sitectx.json` or `/sitectx.json`.
+- MAY also publish the same manifest at `/.well-known/sitectx.json`.
+- MAY publish the current context snapshot at `/sitectx.json`; this path is not
+  a manifest alias.
 - MAY include the optional top-level `resources` object to link to update feeds,
   update snapshots, and public evidence indexes.
 - SHOULD serve the manifest as `application/json` where practical.

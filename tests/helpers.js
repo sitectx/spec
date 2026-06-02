@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -15,6 +15,29 @@ export function runCli(args, options = {}) {
       ...process.env,
       ...options.env
     }
+  });
+}
+
+export function runCliAsync(args, options = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [cliPath, ...args], {
+      cwd: options.cwd || repoRoot,
+      env: {
+        ...process.env,
+        ...options.env
+      }
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("close", (status) => {
+      resolve({ status, stdout, stderr });
+    });
   });
 }
 

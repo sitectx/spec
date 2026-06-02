@@ -48,6 +48,7 @@ function printInspection(result) {
   writeLine(`Context URL: ${result.contextUrl || "unknown"}`);
   writeLine(`Updates URL: ${result.updatesUrl || "unknown"}`);
   writeLine(`Updates NDJSON URL: ${result.updatesNdjsonUrl || "unknown"}`);
+  writeLine(`Evidence URL: ${result.evidenceUrl || "unknown"}`);
   writeLine(`Generated: ${result.generatedAt || "unknown"}`);
   writeLine(`Sections: ${result.sectionCount ?? 0}`);
   writeLine(`Updates: ${result.updateCount ?? 0}`);

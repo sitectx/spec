@@ -12,11 +12,11 @@ export function createManifest(config, generatedAt) {
       contentType: "application/json"
     },
     updates: {
-      url: "/updates.json",
+      url: "/sitectx/updates.json",
       contentType: "application/json"
     },
     updatesNdjson: {
-      url: "/updates.ndjson",
+      url: "/sitectx/updates.ndjson",
       contentType: "application/x-ndjson"
     }
   };

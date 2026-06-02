@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { createRequire } from "node:module";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS } from "./exit-codes.js";
 import { writeError } from "./output.js";
+import { registerDiscoverCommand } from "./commands/discover.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
 import { registerGenerateCommand } from "./commands/generate.js";
 import { registerInitCommand } from "./commands/init.js";
@@ -22,6 +23,7 @@ export function buildProgram() {
 
   registerVersionCommand(program, packageJson.version);
   registerInitCommand(program);
+  registerDiscoverCommand(program);
   registerGenerateCommand(program);
   registerValidateCommand(program);
   registerDoctorCommand(program);

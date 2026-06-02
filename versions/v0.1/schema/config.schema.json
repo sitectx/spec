@@ -63,6 +63,78 @@
       "items": {
         "$ref": "#/$defs/updateInput"
       }
+    },
+    "positioning": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "not": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "canonicalFacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reviewableItem"
+      }
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reviewableItem"
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reviewableItem"
+      }
+    },
+    "faq": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reviewableItem"
+      }
+    },
+    "sourcePages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sourcePage"
+      }
+    },
+    "discoveryCandidates": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "facts": {
+          "type": "array"
+        },
+        "claims": {
+          "type": "array"
+        },
+        "faq": {
+          "type": "array"
+        },
+        "pages": {
+          "type": "array"
+        }
+      }
+    },
+    "discovery": {
+      "$ref": "#/$defs/discovery"
     }
   },
   "additionalProperties": true,
@@ -136,6 +208,125 @@
         "publishedAt": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "sourcePage": {
+      "type": "object",
+      "required": [
+        "id",
+        "url"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "purpose": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "lastReviewedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "discoveredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contentHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "reviewableItem": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "reviewRequired": {
+          "type": "boolean"
+        }
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft_review_required",
+            "reviewed"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "baseUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "pagesFetched": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pagesIncluded": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "corpusPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }

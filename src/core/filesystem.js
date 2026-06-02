@@ -15,9 +15,13 @@ export function artifactPaths(root = ".") {
   return {
     root: resolvedRoot,
     manifest: path.join(resolvedRoot, ".well-known", "sitectx"),
+    manifestAlias: path.join(resolvedRoot, ".well-known", "sitectx.json"),
     context: path.join(resolvedRoot, "sitectx.json"),
-    updates: path.join(resolvedRoot, "updates.json"),
-    ndjson: path.join(resolvedRoot, "updates.ndjson"),
+    updates: path.join(resolvedRoot, "sitectx", "updates.json"),
+    ndjson: path.join(resolvedRoot, "sitectx", "updates.ndjson"),
+    evidence: path.join(resolvedRoot, "sitectx", "evidence.json"),
+    legacyUpdates: path.join(resolvedRoot, "updates.json"),
+    legacyNdjson: path.join(resolvedRoot, "updates.ndjson"),
     config: path.join(resolvedRoot, "sitectx.config.json")
   };
 }
@@ -42,6 +46,18 @@ export async function readUtf8(filePath) {
 export async function writeUtf8(filePath, content) {
   await ensureParentDirectory(filePath);
   await fs.writeFile(filePath, content, "utf8");
+}
+
+export async function removeFileIfExists(filePath) {
+  try {
+    await fs.unlink(filePath);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
 }
 
 export function displayPath(root, filePath) {
