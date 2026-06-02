@@ -18,7 +18,7 @@ export function buildProgram() {
   program
     .name("sitectx")
     .description("Create, validate, inspect, and diagnose SiteCTX artifacts.")
-    .version(packageJson.version, "--cli-version", "Print raw package version.");
+    .version(packageJson.version);
 
   registerVersionCommand(program, packageJson.version);
   registerInitCommand(program);
@@ -39,7 +39,7 @@ export async function runCli(argv) {
     return program._sitectxExitCode ?? EXIT_SUCCESS;
   } catch (error) {
     if (typeof error.exitCode === "number") {
-      if (error.code !== "commander.helpDisplayed") {
+      if (error.code !== "commander.helpDisplayed" && error.code !== "commander.version") {
         const message = error.message || "Command failed.";
         if (!message.startsWith("error:")) {
           writeError(message);

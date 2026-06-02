@@ -19,4 +19,13 @@ describe("CLI help and version", () => {
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe("SiteCTX CLI 0.1.0");
   });
+
+  it("standard version flags print the raw package version", () => {
+    for (const flag of ["--version", "-V"]) {
+      const result = runCli([flag]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe("0.1.0");
+    }
+  });
 });

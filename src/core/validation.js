@@ -69,16 +69,6 @@ export async function validateLocalArtifacts(options = {}) {
     key: "context",
     validator: validators.context
   });
-  if (parsed.context) {
-    validateWithSchema({
-      collector,
-      root,
-      filePath: paths.context,
-      key: "context.v0.1",
-      validator: validators.sitectx,
-      value: parsed.context
-    });
-  }
   parsed.updates = await readJsonArtifact({
     collector,
     root,
