@@ -1,7 +1,29 @@
 {
   "name": "sitectx",
   "version": "0.1.0",
-  "description": "Developer CLI and draft specification for SiteCTX website context artifacts.",
+  "description": "A CLI for publishing machine-readable website context with deterministic discovery, validation, and human review gates.",
+  "license": "MIT",
+  "author": "Scott May",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sitectx/spec.git"
+  },
+  "homepage": "https://github.com/sitectx/spec#readme",
+  "bugs": {
+    "url": "https://github.com/sitectx/spec/issues"
+  },
+  "keywords": [
+    "sitectx",
+    "ai",
+    "llm",
+    "website-context",
+    "well-known",
+    "metadata",
+    "freshness",
+    "discovery",
+    "schema",
+    "cli"
+  ],
   "type": "module",
   "bin": {
     "sitectx": "./bin/sitectx.js"
@@ -21,15 +43,21 @@
     "cli": "node ./bin/sitectx.js",
     "doctor": "node ./bin/sitectx.js doctor --root .",
     "validate": "node ./bin/sitectx.js validate --root .",
+    "lint": "eslint .",
+    "check": "npm run lint && npm test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "pack:check": "npm pack --dry-run"
+    "pack:check": "npm pack --dry-run --cache ./.npm-cache"
   },
   "dependencies": {
+    "@clack/prompts": "^1.5.0",
     "ajv": "^8.17.1",
     "commander": "^12.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "globals": "^15.15.0",
     "vitest": "^4.1.8"
   }
 }

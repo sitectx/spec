@@ -1,148 +1,170 @@
 # SiteCTX
 
-SiteCTX is a machine-readable context layer for websites. It lets a site
-publish structured, freshness-aware context for automated systems, including
-important pages, entities, offers, updates, freshness metadata, resource links,
-feed links, public evidence resources, and supporting source URLs.
+SiteCTX is a CLI for publishing machine-readable website context with
+deterministic discovery, validation, and human review gates.
 
-The current draft is [SiteCTX v0.1](versions/v0.1/README.md).
+Run SiteCTX once, generate the files, review them, and ship them with your site.
+No package install is required in the app you are publishing.
 
-## What SiteCTX Is
+SiteCTX creates a validated `/.well-known/sitectx` manifest, canonical site
+context, freshness metadata, reviewable updates, actions, navigation, profile
+links, and catalog pointers for AI systems and internal tools.
 
-SiteCTX has a required JSON manifest and optional linked update feeds and public
-evidence resources. A website can publish the manifest at a predictable
-location, preferably:
-
-```text
-/.well-known/sitectx
-```
-
-The manifest is the required core. It gives automated consumers a compact,
-publisher-provided summary of site context while linking back to source pages
-that remain the authoritative human and machine-readable web resources.
-Publishers may also link to optional update feeds and public evidence resources
-from the manifest.
-
-## What SiteCTX Is Not
-
-SiteCTX is not crawler permission control, legal certification, a model training
-permission format, a ranking guarantee, a replacement for the website itself, or
-a complete semantic web ontology.
-
-Sites should continue to use existing mechanisms such as robots.txt, sitemaps,
-HTTP caching, structured data, feeds, and access control for their established
-purposes.
-
-## Quick Example
-
-```json
-{
-  "sitectx_version": "0.1",
-  "site": {
-    "url": "https://example.com/",
-    "name": "Example Site"
-  },
-  "freshness": {
-    "status": "fresh",
-    "generated_at": "2026-05-31T14:00:00Z"
-  },
-  "records": [
-    {
-      "id": "page:home",
-      "type": "page",
-      "url": "https://example.com/",
-      "observed_at": "2026-05-31T13:58:00Z",
-      "title": "Example Site"
-    }
-  ]
-}
-```
-
-## Repository Layout
-
-- [versions/v0.1/SPEC.md](versions/v0.1/SPEC.md): draft specification
-- [versions/v0.1/conformance.md](versions/v0.1/conformance.md): publisher,
-  consumer, and validator conformance guidance
-- [versions/v0.1/security-and-privacy.md](versions/v0.1/security-and-privacy.md):
-  operational security and privacy considerations
-- [versions/v0.1/schema/sitectx.schema.json](versions/v0.1/schema/sitectx.schema.json):
-  JSON Schema for the v0.1 manifest
-- [versions/v0.1/examples](versions/v0.1/examples): sample manifests, update
-  streams, public evidence resources, and record documents
-
-## SiteCTX CLI
-
-This repository includes a Node.js CLI package for creating and checking
-SiteCTX artifacts. It is intended as a developer on-ramp for the draft spec and
-is not published to npm from this repository.
+## Zero-Install Quick Start
 
 ```bash
-npm install
-npm test
-node ./bin/sitectx.js --help
-node ./bin/sitectx.js discover --url https://example.com --out sitectx.config.draft.json
-node ./bin/sitectx.js init --root ./demo --site-url https://example.com --name "Example Site"
-node ./bin/sitectx.js validate --root ./demo
-node ./bin/sitectx.js doctor --root ./demo
-node ./bin/sitectx.js inspect --root ./demo
+npx sitectx@latest init
+npx sitectx@latest validate .
+npx sitectx@latest doctor .
+npx sitectx@latest inspect .
 ```
 
-The CLI generates these public artifacts:
+In an interactive terminal, `init` asks for the site URL and output location,
+discovers the site, shows what it found, writes the files, and validates them.
+
+## Existing App
+
+For a Next.js, Vite, Astro, or static app with a `public/` directory:
+
+```bash
+npx sitectx@latest init --root . --public-dir ./public
+```
+
+When SiteCTX detects `./public`, generated public files go there so the app can
+serve:
 
 ```text
 /.well-known/sitectx
 /.well-known/sitectx.json
 /sitectx.json
+/sitectx/catalogs.json
 /sitectx/updates.json
 /sitectx/updates.ndjson
-/sitectx/evidence.json  (optional evidence index)
 ```
 
-It also creates the local source config:
+The source config stays in the app root:
 
 ```text
-/sitectx.config.json
+sitectx.config.json
 ```
 
-Available commands:
+SiteCTX does not mutate `package.json`, create `node_modules`, or write a package
+lock during `init`.
+
+## Localhost Discovery
+
+Start your app:
 
 ```bash
-node ./bin/sitectx.js init
-node ./bin/sitectx.js discover
-node ./bin/sitectx.js generate
-node ./bin/sitectx.js build
-node ./bin/sitectx.js validate
-node ./bin/sitectx.js doctor
-node ./bin/sitectx.js inspect
-node ./bin/sitectx.js version
+npm run dev
 ```
 
-### Discovery Workflow
-
-`sitectx discover` creates a review-required draft config from real pages fetched
-from a bounded same-origin crawl:
+Discover the running site:
 
 ```bash
-node ./bin/sitectx.js discover --url https://example.com --out sitectx.config.draft.json
+npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
 ```
 
-Discovery is deterministic. It does not call AI services, model APIs, browser
-automation, `wget`, or `curl`. It extracts source page metadata, short redacted
-excerpts, candidate FAQ, candidate claims, source pages, provenance, and
-freshness metadata into a draft config. It does not infer canonical truth.
-Candidate facts, claims, FAQ, and page summaries are marked for review and stay
-under `discoveryCandidates` until a human promotes them.
+This writes:
 
-Review and edit the draft before publishing:
+```text
+sitectx.config.draft.json
+```
+
+Discovery drafts are review-required by default. A normal generate command will
+fail until the draft is reviewed:
 
 ```bash
-# review/edit sitectx.config.draft.json first
-node ./bin/sitectx.js generate --config sitectx.config.draft.json --out public --force
-node ./bin/sitectx.js validate --root public
-node ./bin/sitectx.js doctor --root public
+npx sitectx@latest generate sitectx.config.draft.json ./public
 ```
 
-Unreviewed discovery drafts contain:
+To generate from an unreviewed draft during testing, be explicit:
+
+```bash
+npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force
+```
+
+If you use a localhost URL, SiteCTX accepts it for development and warns you to
+replace `site.url` with the production URL before publishing.
+
+## Validate Before Deploy
+
+```bash
+npx sitectx@latest validate ./public
+npx sitectx@latest doctor ./public
+npx sitectx@latest inspect ./public
+```
+
+After deployment:
+
+```bash
+npx sitectx@latest doctor https://example.com
+npx sitectx@latest inspect https://example.com
+```
+
+## What Gets Generated
+
+Public files:
+
+```text
+.well-known/sitectx
+.well-known/sitectx.json
+sitectx.json
+sitectx/catalogs.json
+sitectx/updates.json
+sitectx/updates.ndjson
+```
+
+Local source config:
+
+```text
+sitectx.config.json
+```
+
+The manifest at `/.well-known/sitectx` is the entry point. It includes site
+identity, summary, freshness, important pages, user actions, navigation, and
+links to the canonical context, catalog index, and update feeds.
+
+Actions tell systems what users can do:
+
+```json
+{
+  "id": "action:contact",
+  "type": "contact",
+  "url": "https://example.com/contact",
+  "label": "Contact",
+  "priority": 1
+}
+```
+
+Navigation tells systems how the site presents itself:
+
+```json
+{
+  "label": "Products",
+  "url": "https://example.com/products",
+  "role": "products"
+}
+```
+
+Catalogs point to dynamic inventory, listings, offers, or external commerce
+systems without crawling every item:
+
+```json
+{
+  "id": "catalog:shopify-products",
+  "type": "products",
+  "status": "detected",
+  "source": "shopify",
+  "url": "https://example.com/products.json",
+  "label": "Shopify product catalog",
+  "requiresSetup": false
+}
+```
+
+## Review Gate
+
+`discover` writes a review-required draft:
 
 ```json
 {
@@ -152,58 +174,95 @@ Unreviewed discovery drafts contain:
 }
 ```
 
-`generate` refuses those drafts by default. After review, set
-`discovery.status` to `"reviewed"`. A draft can be generated explicitly with
-`--allow-draft`, but review is recommended:
+`generate` refuses that draft by default. Review the config and set
+`discovery.status` to `"reviewed"`, or pass `--allow-draft` when you intentionally
+want to generate test artifacts.
+
+## No Install Required
+
+The public workflow is:
 
 ```bash
-node ./bin/sitectx.js generate --config sitectx.config.draft.json --out public --allow-draft --force
+npx sitectx@latest ...
 ```
 
-Discovery is intended for your own sites or sites you are authorized to inspect.
-SiteCTX is not a crawler permission system, model training license, legal
-certification, or ranking guarantee.
+Teams that want pinned repeatable scripts can add SiteCTX as a local dev
+dependency, but that is optional and not required for publishing.
 
-After npm publication, users will be able to run:
+## Troubleshooting
+
+Localhost server not running:
+`discover`, `doctor`, or `inspect` will fail cleanly if
+`http://localhost:3000` is not reachable. Start the app first with `npm run dev`.
+
+Existing files:
+Interactive `init` asks before overwriting. Non-interactive runs require
+`--force`.
+
+Invalid URL:
+Use `http://` or `https://`. Localhost URLs such as
+`http://localhost:3000` and `http://127.0.0.1:3000` are valid for development.
+
+Missing public directory:
+Pass `--public-dir ./public` for app output. If no public directory is detected,
+SiteCTX writes to the selected root.
+
+Draft config needs review:
+Use `generate sitectx.config.draft.json ./public --allow-draft --force` for test
+generation, or review the config and set `discovery.status` to `"reviewed"`.
+
+## Common Commands
 
 ```bash
-npx sitectx doctor --url https://example.com
+npx sitectx@latest init
+npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
+npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force
+npx sitectx@latest validate ./public
+npx sitectx@latest doctor ./public
+npx sitectx@latest inspect ./public
+npx sitectx@latest version
 ```
 
-Pre-publish package testing:
+## Specification
+
+The current draft is [SiteCTX v0.1](versions/v0.1/README.md).
+
+Repository references:
+
+- [versions/v0.1/SPEC.md](versions/v0.1/SPEC.md)
+- [versions/v0.1/schema/sitectx.schema.json](versions/v0.1/schema/sitectx.schema.json)
+- [versions/v0.1/schema/catalogs.schema.json](versions/v0.1/schema/catalogs.schema.json)
+- [versions/v0.1/examples](versions/v0.1/examples)
+
+## Local Development
 
 ```bash
-npm pack --dry-run
-npm pack
+npm install
+npm run lint
+npm test
+npm run check
+npm run pack:check
+node ./bin/sitectx.js --help
+```
 
-TMPDIR="$(mktemp -d)"
+Tarball smoke without installing into an app:
+
+```bash
+cd /Users/scottmay/Projects/spec
+npm test
+npm --cache /private/tmp/sitectx-npm-cache pack --pack-destination /private/tmp
+
+TMPDIR="$(mktemp -d /private/tmp/sitectx-zero-install.XXXXXX)"
 cd "$TMPDIR"
-npm init -y
-npm install /absolute/path/to/sitectx-0.1.0.tgz
-npx sitectx --help
-npx sitectx init --root ./demo --site-url https://example.com --name "Example Site" --force
-npx sitectx validate --root ./demo
-npx sitectx doctor --root ./demo
-npx sitectx inspect --root ./demo
+
+npm exec --cache /private/tmp/sitectx-npm-cache \
+  --package /private/tmp/sitectx-0.1.0.tgz \
+  -- sitectx --help
 ```
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [GOVERNANCE.md](GOVERNANCE.md) before
-opening an Issue, Discussion, or pull request. Proposals and pull requests must
-follow the human-accountable contribution process. Maintainers should also
-review [GITHUB_LAUNCH_SETTINGS.md](GITHUB_LAUNCH_SETTINGS.md) before public
-launch or external proposal intake.
-
-## Development
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
-python scripts/validate_v01.py
-```
+The Python validator is an optional repository utility for maintaining draft spec
+examples and schemas. It is not required for npm users.
 
 ## License
 
-This repository is licensed under the MIT License. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
