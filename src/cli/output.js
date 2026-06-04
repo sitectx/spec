@@ -1,5 +1,7 @@
+import { safeJsonStringify } from "../core/json-hygiene.js";
+
 export function writeJson(value) {
-  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+  process.stdout.write(`${safeJsonStringify(value, 2)}\n`);
 }
 
 export function writeLine(value = "") {

@@ -1,8 +1,10 @@
+import { safeJsonStringify } from "./json-hygiene.js";
+
 export function stringifyNdjson(records) {
   if (!records || records.length === 0) {
     return "";
   }
-  return `${records.map((record) => JSON.stringify(record)).join("\n")}\n`;
+  return `${records.map((record) => safeJsonStringify(record)).join("\n")}\n`;
 }
 
 export function parseNdjson(text) {

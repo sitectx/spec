@@ -1,6 +1,7 @@
 import path from "node:path";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS } from "../exit-codes.js";
 import { writeError, writeJson, writeLine } from "../output.js";
+import { stableJson } from "../../core/artifacts.js";
 import { loadConfig, normalizeConfig } from "../../core/config.js";
 import { fileExists, resolveRoot, writeUtf8 } from "../../core/filesystem.js";
 import { applyReviewDecisions, keyedItems, reviewablePages, summarizeReviewConfig } from "../../core/review.js";
@@ -78,7 +79,7 @@ export async function runReview(options = {}) {
         result.ok = false;
         result.errors.push(`${outPath} already exists. Use --force to overwrite it.`);
       } else {
-        await writeUtf8(outPath, `${JSON.stringify(reviewed, null, 2)}\n`);
+        await writeUtf8(outPath, stableJson(reviewed));
       }
     }
   } catch (error) {

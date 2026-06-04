@@ -126,6 +126,69 @@ describe("generate", () => {
     expect(context.records.map((record) => record.id)).toEqual(["page:home", "page:about"]);
   });
 
+  it("normalizes risky Unicode in generated JSON string values", async () => {
+    const configRoot = await makeTempRoot();
+    const outRoot = await makeTempRoot();
+    const configPath = path.join(configRoot, "sitectx.config.json");
+    expect(
+      runCli([
+        "init",
+        "--root",
+        configRoot,
+        "--site-url",
+        "https://example.com",
+        "--name",
+        "Example Site",
+        "--description",
+        "Example Site helps teams publish useful website context."
+      ]).status
+    ).toBe(0);
+
+    const config = await readJson(configPath);
+    const dirtyName = "Jet Fresh\u2019s Caf\u00E9";
+    const dirtyDescription = "Wholesale flowers \u2014 buyer\u202Es guide for M\u00FCnchen.";
+    config.name = dirtyName;
+    config.description = dirtyDescription;
+    config.publisher.name = dirtyName;
+    config.identity.name = dirtyName;
+    config.identity.description = dirtyDescription;
+    config.positioning.summary = dirtyDescription;
+    config.sections[0].title = dirtyName;
+    config.sections[0].summary = dirtyDescription;
+    config.updates[0].summary = "Buyer\u2019s update\u202E hidden";
+    await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+
+    const result = runCli([
+      "generate",
+      "--root",
+      configRoot,
+      "--config",
+      "sitectx.config.json",
+      "--out",
+      outRoot,
+      "--force"
+    ]);
+
+    expect(result.status).toBe(0);
+    const riskyPattern = /[\u2018-\u201F\u202A-\u202E]/u;
+    for (const file of [
+      ".well-known/sitectx",
+      ".well-known/sitectx.json",
+      "sitectx.json",
+      "sitectx/updates.json",
+      "sitectx/updates.ndjson"
+    ]) {
+      const raw = await fs.readFile(path.join(outRoot, file), "utf8");
+      expect(raw).not.toMatch(riskyPattern);
+    }
+    const context = await readJson(path.join(outRoot, "sitectx.json"));
+    const updates = await readJson(path.join(outRoot, "sitectx", "updates.json"));
+
+    expect(context.site.name).toBe("Jet Fresh's Caf\u00E9");
+    expect(context.site.description).toBe("Wholesale flowers - buyers guide for M\u00FCnchen.");
+    expect(updates.updates[0].summary).toBe("Buyer's update hidden");
+  });
+
   it("config validation fails with a bad URL", async () => {
     const root = await makeTempRoot();
     await fs.writeFile(

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { safeJsonStringify } from "./json-hygiene.js";
 import { stringifyNdjson } from "./ndjson.js";
 import { artifactPaths, displayPath } from "./filesystem.js";
 import { createContext } from "../templates/context.js";
@@ -22,7 +23,7 @@ export const ALL_INIT_FILES = [
 ];
 
 export function stableJson(value) {
-  return `${JSON.stringify(value, null, 2)}\n`;
+  return `${safeJsonStringify(value, 2)}\n`;
 }
 
 export function buildArtifacts(config, options = {}) {
