@@ -1,4 +1,5 @@
 import path from "node:path";
+import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS } from "../exit-codes.js";
 import { writeError, writeJson, writeLine } from "../output.js";
 import { discoverSite, writeDiscoveryOutput } from "../../core/discover.js";
@@ -12,7 +13,8 @@ export function registerDiscoverCommand(program) {
   program
     .command("discover")
     .description("Crawl a bounded same-origin site and write a review-required draft config.")
-    .requiredOption("--url <url>", "Base site URL.")
+    .argument("[url]", "Website URL to discover.")
+    .addOption(new Option("--url <url>", "Base site URL.").hideHelp())
     .option("--out <path>", "Draft config output path.", "sitectx.config.draft.json")
     .option("--workdir <path>", "Directory for crawl corpus.")
     .option("--keep-workdir", "Preserve generated crawl corpus after run.")
@@ -28,43 +30,78 @@ export function registerDiscoverCommand(program) {
     .option("--dry-run", "Print discovered config without writing output.")
     .option("--json", "Print machine-readable output.")
     .option("--verbose", "Include crawl details.")
-    .action(async (options) => {
-      const result = await runDiscover(options);
+    .addHelpText("after", `
+
+Examples:
+  npx sitectx@latest discover https://example.com
+  npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
+
+Behavior:
+  Writes sitectx.config.draft.json by default.
+  Draft configs require review before generate unless --allow-draft is used there.
+`)
+    .action(async (url, options) => {
+      const resolvedUrl = resolveDiscoverUrl(url, options.url);
+      if (!resolvedUrl.ok) {
+        writeError(resolvedUrl.message);
+        program._sitectxExitCode = EXIT_RUNTIME_ERROR;
+        return;
+      }
+      const result = await runDiscover({ ...options, url: resolvedUrl.url });
       program._sitectxExitCode = result.ok ? EXIT_SUCCESS : EXIT_RUNTIME_ERROR;
     });
 }
 
-async function runDiscover(options) {
+function resolveDiscoverUrl(argumentUrl, optionUrl) {
+  if (argumentUrl && optionUrl && argumentUrl !== optionUrl) {
+    return {
+      ok: false,
+      message: "Use either sitectx discover <url> or --url, not both."
+    };
+  }
+  const url = argumentUrl || optionUrl;
+  if (!url) {
+    return {
+      ok: false,
+      message: "Website URL required. Try: sitectx discover https://example.com"
+    };
+  }
+  return { ok: true, url };
+}
+
+export async function runDiscover(options) {
   try {
     const result = await discoverSite(options);
     const outPath = path.resolve(options.out);
     if (!options.dryRun) {
       await writeDiscoveryOutput(outPath, result.config, { force: Boolean(options.force) });
     }
-    printDiscoverResult(
-      {
-        ok: true,
-        output: options.dryRun ? null : outPath,
-        workdir: result.workdir,
-        summary: {
-          pagesFetched: result.crawlManifest.pagesFetched,
-          pagesIncluded: result.crawlManifest.pagesIncluded,
-          pagesSkipped: result.crawlManifest.pagesSkipped,
-          warnings: result.warnings.length
-        },
-        config: result.config,
-        crawlManifest: options.verbose ? result.crawlManifest : undefined,
-        warnings: result.warnings
+    const output = {
+      ok: true,
+      output: options.dryRun ? null : outPath,
+      workdir: result.workdir,
+      summary: {
+        pagesFetched: result.crawlManifest.pagesFetched,
+        pagesIncluded: result.crawlManifest.pagesIncluded,
+        pagesSkipped: result.crawlManifest.pagesSkipped,
+        warnings: result.warnings.length
       },
-      options
-    );
-    return { ok: true };
+      config: result.config,
+      crawlManifest: options.verbose ? result.crawlManifest : undefined,
+      warnings: result.warnings
+    };
+    if (!options.silent) {
+      printDiscoverResult(output, options);
+    }
+    return output;
   } catch (error) {
     const result = {
       ok: false,
       errors: [error instanceof Error ? error.message : "Discovery failed."]
     };
-    printDiscoverResult(result, options);
+    if (!options.silent) {
+      printDiscoverResult(result, options);
+    }
     return result;
   }
 }

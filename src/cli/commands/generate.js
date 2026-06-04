@@ -1,4 +1,5 @@
 import path from "node:path";
+import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { writeError, writeJson, writeLine } from "../output.js";
 import { buildArtifacts, toWritePlan } from "../../core/artifacts.js";
@@ -10,15 +11,32 @@ export function registerGenerateCommand(program) {
     program
       .command(name)
       .description(description)
-      .option("--config <path>", "Path to sitectx.config.json.", "sitectx.config.json")
-      .option("--root <path>", "Base directory for resolving config.", ".")
-      .option("--out <path>", "Output root for generated public artifacts.", ".")
+      .argument("[config]", "Path to sitectx.config.json.", "sitectx.config.json")
+      .argument("[out]", "Output root for generated public artifacts.", ".")
+      .addOption(new Option("--config <path>", "Path to sitectx.config.json.").hideHelp())
+      .addOption(new Option("--root <path>", "Base directory for resolving config.").hideHelp())
+      .addOption(new Option("--out <path>", "Output root for generated public artifacts.").hideHelp())
       .option("--force", "Overwrite generated artifacts.")
       .option("--dry-run", "Show intended output without writing.")
       .option("--allow-draft", "Generate from an unreviewed discovery draft.")
       .option("--json", "Print machine-readable output.")
-      .action(async (options) => {
-        const result = await runGenerate(options);
+      .addHelpText("after", `
+
+Examples:
+  npx sitectx@latest generate sitectx.config.json ./public --force
+  npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force
+
+Behavior:
+  Review-required discovery drafts fail unless --allow-draft is passed.
+  Existing generated artifacts require --force.
+`)
+      .action(async (config, out, options) => {
+        const result = await runGenerate({
+          ...options,
+          config: options.config || config || "sitectx.config.json",
+          out: options.out || out || ".",
+          root: options.root || "."
+        });
         program._sitectxExitCode = result.exitCode ?? (result.ok ? EXIT_SUCCESS : EXIT_RUNTIME_ERROR);
       });
   };
@@ -27,7 +45,7 @@ export function registerGenerateCommand(program) {
   addGenerateCommand("build", "Alias for generate.");
 }
 
-async function runGenerate(options) {
+export async function runGenerate(options) {
   const result = {
     ok: true,
     created: [],
@@ -50,7 +68,9 @@ async function runGenerate(options) {
         result.errors.push(
           "Discovered drafts require human review before generation. Edit the config and set discovery.status to \"reviewed\", or pass --allow-draft to generate anyway."
         );
-        printGenerateResult(result, options);
+        if (!options.silent) {
+          printGenerateResult(result, options);
+        }
         return result;
       }
       result.warnings.push(
@@ -66,7 +86,9 @@ async function runGenerate(options) {
   } catch (error) {
     result.ok = false;
     result.errors.push(error.message);
-    printGenerateResult(result, options);
+    if (!options.silent) {
+      printGenerateResult(result, options);
+    }
     return result;
   }
 
@@ -90,7 +112,9 @@ async function runGenerate(options) {
     result.created.push(file.displayPath);
   }
 
-  printGenerateResult(result, options);
+  if (!options.silent) {
+    printGenerateResult(result, options);
+  }
   return result;
 }
 

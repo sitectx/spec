@@ -15,7 +15,9 @@ describe("generate", () => {
         "--site-url",
         "https://example.com",
         "--name",
-        "Example Site"
+        "Example Site",
+        "--description",
+        "Example Site helps teams publish useful website context."
       ]).status
     ).toBe(0);
 
@@ -35,6 +37,7 @@ describe("generate", () => {
       ".well-known/sitectx",
       ".well-known/sitectx.json",
       "sitectx.json",
+      "sitectx/catalogs.json",
       "sitectx/updates.json",
       "sitectx/updates.ndjson"
     ]) {
@@ -71,16 +74,54 @@ describe("generate", () => {
         "--site-url",
         "https://example.com",
         "--name",
-        "Example Site"
+        "Example Site",
+        "--description",
+        "Example Site helps teams publish useful website context."
       ]).status
     ).toBe(0);
 
     const manifest = await readJson(path.join(root, ".well-known/sitectx"));
     const context = await readJson(path.join(root, "sitectx.json"));
+    const catalogs = await readJson(path.join(root, "sitectx", "catalogs.json"));
     const updates = await readJson(path.join(root, "sitectx", "updates.json"));
 
     expect(manifest.generatedAt).toMatch(isoDateTimePattern);
+    expect(manifest.catalogs).toEqual({
+      url: "/sitectx/catalogs.json",
+      contentType: "application/json"
+    });
+    expect(manifest.freshness).toEqual({ status: "fresh" });
+    expect(manifest.site.description).toBe("Example Site helps teams publish useful website context.");
+    expect(manifest.identity).toMatchObject({
+      name: "Example Site",
+      url: "https://example.com",
+      sourceUrl: "https://example.com/"
+    });
+    expect(manifest.summary).toBe("Example Site helps teams publish useful website context.");
+    expect(manifest.records[0]).toMatchObject({
+      id: "page:home",
+      type: "page",
+      title: "Home",
+      role: "home",
+      summary: "Example Site helps teams publish useful website context."
+    });
+    expect(manifest.actions).toEqual([
+      {
+        id: "action:home",
+        type: "learn",
+        url: "https://example.com/",
+        label: "Visit site",
+        priority: 1,
+        sourceUrl: "https://example.com/",
+        sourceText: "Visit site"
+      }
+    ]);
     expect(context.freshness.generated_at).toMatch(isoDateTimePattern);
+    expect(context.records[0].page_role).toBe("home");
+    expect(context.resources.catalogs).toBe("https://example.com/sitectx/catalogs.json");
+    expect(catalogs.kind).toBe("sitectx.catalogs");
+    expect(catalogs.catalogs).toEqual([]);
+    expect(context.actions).toEqual(manifest.actions);
     expect(updates.updates[0].publishedAt).toMatch(isoDateTimePattern);
     expect(context.records.map((record) => record.id)).toEqual(["page:home", "page:about"]);
   });

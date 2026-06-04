@@ -16,14 +16,16 @@ describe("inspect", () => {
       ]).status
     ).toBe(0);
 
-    const result = runCli(["inspect", "--root", root]);
+    const result = runCli(["inspect", root]);
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Site name: Example Site");
     expect(result.stdout).toContain("Context URL: /sitectx.json");
+    expect(result.stdout).toContain("Catalogs URL: /sitectx/catalogs.json");
     expect(result.stdout).toContain("Updates URL: /sitectx/updates.json");
     expect(result.stdout).toContain("Updates NDJSON URL: /sitectx/updates.ndjson");
     expect(result.stdout).toContain("Sections: 2");
+    expect(result.stdout).toContain("Catalogs: 0");
     expect(result.stdout).toContain("Updates: 1");
   });
 
@@ -37,7 +39,16 @@ describe("inspect", () => {
     expect(result.status).toBe(0);
     expect(parsed.specVersion).toBe("0.1");
     expect(parsed.contextUrl).toBe("/sitectx.json");
+    expect(parsed.catalogsUrl).toBe("/sitectx/catalogs.json");
     expect(parsed.updatesUrl).toBe("/sitectx/updates.json");
     expect(parsed.updatesNdjsonUrl).toBe("/sitectx/updates.ndjson");
+  });
+
+  it("inspect unsupported URL schemes fail cleanly", () => {
+    const result = runCli(["inspect", "ftp://example.com"]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain("Inspect only accepts http/https URLs or local paths");
+    expect(result.stderr).not.toContain("Trace:");
   });
 });

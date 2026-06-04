@@ -8,7 +8,7 @@ describe("validate", () => {
     const root = await makeTempRoot();
     expect(runCli(["init", "--root", root]).status).toBe(0);
 
-    const result = runCli(["validate", "--root", root]);
+    const result = runCli(["validate", root]);
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Result: PASS");

@@ -1,3 +1,4 @@
+import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { printCheckResult, writeJson } from "../output.js";
 import { doctorLocal, doctorRemote } from "../../core/doctor-checks.js";
@@ -6,14 +7,23 @@ export function registerDoctorCommand(program) {
   program
     .command("doctor")
     .description("Run SiteCTX diagnostics for a local root or public URL.")
-    .option("--root <path>", "Local website root.")
-    .option("--url <url>", "Public website URL.")
+    .argument("[target]", "Public URL or local root. Defaults to current directory.")
+    .addOption(new Option("--root <path>", "Local website root.").hideHelp())
+    .addOption(new Option("--url <url>", "Public website URL.").hideHelp())
     .option("--timeout <ms>", "Remote fetch timeout in milliseconds.", "10000")
     .option("--strict", "Treat warnings as failures.")
     .option("--json", "Print machine-readable output.")
     .option("--verbose", "Include extra check details.")
-    .action(async (options) => {
-      if (options.root && options.url) {
+    .addHelpText("after", `
+
+Examples:
+  npx sitectx@latest doctor ./public
+  npx sitectx@latest doctor http://localhost:3000
+  npx sitectx@latest doctor https://example.com
+`)
+    .action(async (target, options) => {
+      const resolvedTarget = resolveDoctorTarget(target, options);
+      if (!resolvedTarget.ok) {
         const result = {
           ok: false,
           strict: Boolean(options.strict),
@@ -23,7 +33,7 @@ export function registerDoctorCommand(program) {
               level: "FAIL",
               code: "usage.target",
               target: "doctor",
-              message: "Use either --root or --url, not both."
+              message: resolvedTarget.message
             }
           ]
         };
@@ -36,15 +46,44 @@ export function registerDoctorCommand(program) {
         return;
       }
 
-      const result = options.url
-        ? await doctorRemote(options)
-        : await doctorLocal({ ...options, root: options.root || "." });
+      const result = resolvedTarget.url
+        ? await doctorRemote({ ...options, url: resolvedTarget.url })
+        : await doctorLocal({ ...options, root: resolvedTarget.root });
 
       if (options.json) {
         writeJson(result);
       } else {
-        printCheckResult("SiteCTX doctor", result, options.url || options.root || ".");
+        printCheckResult("SiteCTX doctor", result, resolvedTarget.url || resolvedTarget.root);
       }
       program._sitectxExitCode = result.ok ? EXIT_SUCCESS : EXIT_VALIDATION_FAILED;
     });
+}
+
+function resolveDoctorTarget(target, options) {
+  const explicitTargets = [target, options.root, options.url].filter(Boolean);
+  if (explicitTargets.length > 1) {
+    return {
+      ok: false,
+      message: "Use one target only. Try: sitectx doctor https://example.com or sitectx doctor ./public"
+    };
+  }
+  if (options.url) {
+    return { ok: true, url: options.url };
+  }
+  if (options.root) {
+    return { ok: true, root: options.root };
+  }
+  if (!target) {
+    return { ok: true, root: "." };
+  }
+  if (/^https?:\/\//i.test(target)) {
+    return { ok: true, url: target };
+  }
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) {
+    return {
+      ok: false,
+      message: "Doctor only accepts http/https URLs or local paths. Try: sitectx doctor http://localhost:3000 or sitectx doctor ./public"
+    };
+  }
+  return { ok: true, root: target };
 }
