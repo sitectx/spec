@@ -2,8 +2,8 @@
 
 SiteCTX v0.1 is a draft JSON manifest format for publishing fresh, structured
 site context to automated systems. The required core is the manifest; publishers
-may also link to optional catalog indexes, update feeds, and public evidence
-resources.
+may also link to optional catalog indexes, update feeds, public evidence
+resources, and disclosed sponsored context.
 The manifest should include enough compact context to be useful on first fetch,
 including site description, summary, freshness, important records, and user
 actions such as donate, contact, book, buy, sign up, and subscribe.
@@ -39,6 +39,7 @@ Optional conventional linked resources include:
 /sitectx/updates.ndjson
 /sitectx/updates.json
 /sitectx/catalogs.json
+/sitectx/sponsored-context.json
 /sitectx/evidence.json
 /sitectx/evidence/{id}.json
 ```
@@ -50,6 +51,8 @@ Optional conventional linked resources include:
 - [security-and-privacy.md](security-and-privacy.md): security and privacy
   considerations
 - [schema/sitectx.schema.json](schema/sitectx.schema.json): JSON Schema
+- [schema/sponsored-context.schema.json](schema/sponsored-context.schema.json):
+  sponsored context JSON Schema
 
 ## Examples
 
@@ -59,6 +62,8 @@ Optional conventional linked resources include:
   manifest with pages, entities, offers, updates, resources, and feeds
 - [examples/catalogs.json](examples/catalogs.json): catalog pointer index for
   dynamic inventory or listing sources
+- [examples/sponsored-context.json](examples/sponsored-context.json): disclosed
+  sponsored commercial placement resource
 - [examples/updates.ndjson](examples/updates.ndjson): line-delimited update feed
 - [examples/updates.json](examples/updates.json): JSON update snapshot
 - [examples/evidence.json](examples/evidence.json): public evidence index

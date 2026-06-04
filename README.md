@@ -358,6 +358,7 @@ Repository references:
 - [versions/v0.1/schema/catalogs.schema.json](versions/v0.1/schema/catalogs.schema.json)
 - [versions/v0.1/schema/sponsored-context.schema.json](versions/v0.1/schema/sponsored-context.schema.json)
 - [versions/v0.1/examples](versions/v0.1/examples)
+- [versions/v0.1/examples/sponsored-context.json](versions/v0.1/examples/sponsored-context.json)
 
 ## Local Development
 

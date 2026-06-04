@@ -1,0 +1,74 @@
+{
+  "specVersion": "0.1",
+  "kind": "sitectx.sponsoredContext",
+  "site": "https://www.rivertonbikes.example/",
+  "generatedAt": "2026-06-04T16:00:00Z",
+  "disclosurePolicy": {
+    "defaultLabel": "Sponsored",
+    "machineDisclosureRequired": true,
+    "humanDisclosureRequired": true,
+    "agentMaySummarize": true,
+    "agentMustPreserveDisclosure": true
+  },
+  "placements": [
+    {
+      "id": "spn_riverton_partner_001",
+      "type": "sponsored_offer",
+      "status": "active",
+      "sponsor": {
+        "name": "Example Sponsor",
+        "url": "https://sponsor.example"
+      },
+      "disclosure": {
+        "label": "Sponsored",
+        "relationship": "paid_placement",
+        "plainLanguage": "This is a paid placement from Example Sponsor.",
+        "humanVisibleUrl": "https://www.rivertonbikes.example/sponsor-disclosures/",
+        "humanVisibleText": "Sponsored placement disclosure"
+      },
+      "offer": {
+        "title": "Example offer title",
+        "summary": "Short factual summary of the offer.",
+        "category": "local_service",
+        "price": "$250/month",
+        "currency": "USD",
+        "validFrom": "2026-06-04",
+        "validUntil": "2026-07-04"
+      },
+      "canonicalAction": {
+        "label": "Request information",
+        "url": "https://sponsor.example/request-info",
+        "actionType": "lead_form"
+      },
+      "targetingContext": {
+        "intendedAudience": [
+          "bike shop customers",
+          "local service buyers"
+        ],
+        "relevantQueries": [
+          "bike service partner offer",
+          "local bicycle service discount"
+        ]
+      },
+      "measurement": {
+        "billableEvents": [
+          "sponsored_listing_active",
+          "verified_human_lead",
+          "qualified_conversion"
+        ],
+        "nonBillableEvents": [
+          "agent_fetch",
+          "agent_click",
+          "crawler_visit",
+          "bot_impression"
+        ]
+      },
+      "evidence": {
+        "sourceUrl": "https://sponsor.example",
+        "observedAt": "2026-06-04T16:00:00Z",
+        "contentHash": "sha256:2f3f5f0a9d3b4b7a6f1e0c8d9a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b",
+        "evidencePacketUrl": "https://www.rivertonbikes.example/sitectx/evidence/spn_riverton_partner_001.json"
+      }
+    }
+  ]
+}

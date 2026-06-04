@@ -66,6 +66,12 @@ Catalog:
   Catalogs let large sites publish where fresh collection data lives without
   requiring the manifest to contain every item.
 
+Sponsored context:
+: An optional linked SiteCTX resource that contains disclosed commercial
+  placements. Sponsored context is not required for conformance and MUST NOT be
+  used to represent automated agent fetches, crawler visits, bot impressions, or
+  agent clicks as human advertising engagement.
+
 Freshness:
 : Metadata describing when the manifest was generated and whether the publisher
   believes the manifest is current.
@@ -111,6 +117,7 @@ Optional conventional resource paths are:
 /sitectx/updates.ndjson
 /sitectx/updates.json
 /sitectx/catalogs.json
+/sitectx/sponsored-context.json
 /sitectx/evidence.json
 /sitectx/evidence/{id}.json
 ```
@@ -120,6 +127,8 @@ Optional conventional resource paths are:
 `/sitectx/catalogs.json` is an optional catalog pointer index for dynamic
 collections such as products, listings, jobs, events, menus, locations, services,
 or offers.
+`/sitectx/sponsored-context.json` is an optional disclosed commercial placement
+resource.
 `/sitectx/evidence.json` is an optional public evidence index.
 `/sitectx/evidence/{id}.json` is an optional individual public evidence record.
 
@@ -181,6 +190,12 @@ the `feeds` array, record-level URLs, or extension fields.
 : OPTIONAL object or array. In the generated CLI manifest this is a link object
   pointing to `/sitectx/catalogs.json`. In context snapshots or legacy manifests,
   publishers MAY include catalog pointer objects directly.
+
+`commercialContext`:
+: OPTIONAL object. Links to a disclosed sponsored context resource and describes
+  the publisher's commercial context policy. When present, it SHOULD include
+  `enabled: true`, `sponsoredContextUrl`, and a policy requiring disclosure,
+  canonical landing pages, and non-billable automated agent/crawler/bot events.
 
 `identity`:
 : OPTIONAL object. Describes publisher identity extracted from explicit site
@@ -373,6 +388,7 @@ SiteCTX resources. Known fields are:
 | --- | --- |
 | `self` | URL of the manifest. |
 | `catalogs` | Optional catalog pointer index URL. |
+| `sponsoredContext` | Optional sponsored context resource URL. |
 | `updates` | Preferred NDJSON update feed URL. |
 | `updates_json` | Optional JSON update snapshot URL. |
 | `evidence` | Optional public evidence index URL. |
@@ -384,6 +400,7 @@ For example:
   "resources": {
     "self": "https://example.com/.well-known/sitectx",
     "catalogs": "https://example.com/sitectx/catalogs.json",
+    "sponsoredContext": "https://example.com/sitectx/sponsored-context.json",
     "updates": "https://example.com/sitectx/updates.ndjson",
     "updates_json": "https://example.com/sitectx/updates.json",
     "evidence": "https://example.com/sitectx/evidence.json"
@@ -417,7 +434,62 @@ Catalog entries MAY include `source`, `format`, `requiresSetup`, `sourceUrl`,
 connector, hosted feed, or validated export before consumers treat the catalog
 as complete and fresh.
 
-### 8.3 Feeds
+### 8.3 Sponsored Context
+
+The optional `/sitectx/sponsored-context.json` resource describes disclosed
+commercial placements. Publishers MUST omit this resource unless they
+intentionally enable sponsored context.
+
+Sponsored context MUST NOT be described as organic, editorial, hidden, or
+undisclosed content. Sponsored, affiliate, partner, and first-party commercial
+placements MUST preserve machine-readable disclosure.
+
+The sponsored context document SHOULD include:
+
+- `specVersion`: `"0.1"`.
+- `kind`: `"sitectx.sponsoredContext"`.
+- `site`: the publisher site URL.
+- `generatedAt`: generation timestamp.
+- `disclosurePolicy`: disclosure requirements for machines and humans.
+- `placements`: zero or more disclosed placement objects.
+
+Each placement SHOULD include:
+
+- `id`: stable placement identifier.
+- `type`: `sponsored_offer`, `affiliate_offer`, `partner_offer`, or
+  `first_party_offer`.
+- `status`: `draft`, `active`, `paused`, or `expired`.
+- `sponsor.name` and `sponsor.url`.
+- `disclosure.label`, `disclosure.relationship`, and
+  `disclosure.plainLanguage`.
+- `offer.title`, `offer.summary`, `offer.category`, `offer.validFrom`, and
+  `offer.validUntil`.
+- `canonicalAction.label`, `canonicalAction.url`, and
+  `canonicalAction.actionType`.
+- `measurement.billableEvents` and `measurement.nonBillableEvents`.
+
+If `measurement` is present, `nonBillableEvents` MUST include:
+
+- `agent_fetch`
+- `agent_click`
+- `crawler_visit`
+- `bot_impression`
+
+Automated fetches, crawler visits, bot impressions, and agent clicks MUST NOT be
+listed as billable events. Human leads, qualified conversions, or explicit
+placement-active events MAY be listed as billable events when the publisher's
+commercial relationship supports them.
+
+Active placements SHOULD NOT have an expired `offer.validUntil` date. Evidence
+fields such as `evidence.sourceUrl`, `evidence.observedAt`, `evidence.contentHash`,
+and `evidence.evidencePacketUrl` are RECOMMENDED.
+
+Sponsored context MUST NOT claim endorsement, approval, certification, or
+ranking benefit from SiteCTX. It MUST NOT be used for fake PPC, hidden ad
+inventory, SEO keyword stuffing, cloaking, or billing advertisers for bot
+traffic.
+
+### 8.4 Feeds
 
 The optional top-level `feeds` array links to related streams. A feed object
 SHOULD include:
@@ -476,14 +548,22 @@ Extensions MUST NOT change the meaning of required v0.1 fields.
 
 ## 12. JSON Schema
 
-The non-exclusive JSON Schema for SiteCTX v0.1 is published at:
+The non-exclusive JSON Schema for the SiteCTX v0.1 manifest is published at:
 
 ```text
 versions/v0.1/schema/sitectx.schema.json
 ```
 
-The schema is intended to catch common structural errors. The normative text in
-this document defines the specification.
+Additional linked-resource schemas include:
+
+```text
+versions/v0.1/schema/catalogs.schema.json
+versions/v0.1/schema/sponsored-context.schema.json
+versions/v0.1/schema/updates.schema.json
+```
+
+The schemas are intended to catch common structural errors. The normative text
+in this document defines the specification.
 
 ## 13. Security and Privacy
 
