@@ -47,6 +47,7 @@ export async function validateLocalArtifacts(options = {}) {
   const paths = {
     manifest: path.resolve(options.manifest || defaults.manifest),
     context: path.resolve(options.context || defaults.context),
+    catalogs: path.resolve(options.catalogs || defaults.catalogs),
     updates: path.resolve(options.updates || defaults.updates),
     ndjson: path.resolve(options.ndjson || defaults.ndjson)
   };
@@ -133,6 +134,15 @@ export async function validateLocalArtifacts(options = {}) {
     key: "context",
     validator: validators.context
   });
+  if (parsed.manifest?.catalogs?.url || (await fileExists(paths.catalogs))) {
+    parsed.catalogs = await readJsonArtifact({
+      collector,
+      root,
+      filePath: paths.catalogs,
+      key: "catalogs",
+      validator: validators.catalogs
+    });
+  }
   parsed.updates = await readJsonArtifact({
     collector,
     root,
@@ -184,8 +194,15 @@ export async function validateLocalArtifacts(options = {}) {
   if (parsed.context) {
     validateUniqueField(collector, "context.sectionIds", "sitectx.json", parsed.context.sections, "id", "Section IDs are unique.");
     validateUniqueField(collector, "context.recordIds", "sitectx.json", parsed.context.records, "id", "Record IDs are unique.");
+    validateUniqueField(collector, "context.actionIds", "sitectx.json", parsed.context.actions, "id", "Action IDs are unique.");
     validateStringLengths(collector, "sitectx.json", parsed.context);
     addSecretChecks(collector, displayPath(root, paths.context), parsed.context);
+  }
+  if (parsed.catalogs) {
+    const catalogsTarget = displayPath(root, paths.catalogs);
+    validateUniqueField(collector, "catalogs.ids", catalogsTarget, parsed.catalogs.catalogs, "id", "Catalog IDs are unique.");
+    validateStringLengths(collector, catalogsTarget, parsed.catalogs);
+    addSecretChecks(collector, catalogsTarget, parsed.catalogs);
   }
   if (parsed.updates) {
     const updatesTarget = displayPath(root, paths.updates);
@@ -240,6 +257,7 @@ export function validateWithSchema({ collector, root, filePath, key, validator, 
 async function validateManifestLinks({ collector, root, manifest }) {
   const links = [
     ["context", manifest.context?.url, "sitectx.json"],
+    ["catalogs", manifest.catalogs?.url, "sitectx/catalogs.json", true],
     ["updates", manifest.updates?.url, "sitectx/updates.json"],
     ["updatesNdjson", manifest.updatesNdjson?.url, "sitectx/updates.ndjson"],
     ["evidence", manifest.evidence?.url, "sitectx/evidence.json", true]

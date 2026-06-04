@@ -2,6 +2,7 @@ import path from "node:path";
 import { stringifyNdjson } from "./ndjson.js";
 import { artifactPaths, displayPath } from "./filesystem.js";
 import { createContext } from "../templates/context.js";
+import { createCatalogs } from "../templates/catalogs.js";
 import { createDefaultConfig } from "../templates/default-config.js";
 import { createManifest } from "../templates/manifest.js";
 import { createNdjsonUpdates, createUpdates } from "../templates/updates.js";
@@ -10,6 +11,7 @@ export const GENERATED_ARTIFACTS = [
   ".well-known/sitectx",
   ".well-known/sitectx.json",
   "sitectx.json",
+  "sitectx/catalogs.json",
   "sitectx/updates.json",
   "sitectx/updates.ndjson"
 ];
@@ -27,6 +29,7 @@ export function buildArtifacts(config, options = {}) {
   const generatedAt = options.generatedAt || new Date().toISOString();
   const manifest = createManifest(config, generatedAt);
   const context = createContext(config, generatedAt);
+  const catalogs = createCatalogs(config, generatedAt);
   const updates = createUpdates(config, generatedAt);
   const ndjsonUpdates = createNdjsonUpdates(config, generatedAt);
 
@@ -49,6 +52,11 @@ export function buildArtifacts(config, options = {}) {
         data: context
       },
       {
+        relativePath: "sitectx/catalogs.json",
+        content: stableJson(catalogs),
+        data: catalogs
+      },
+      {
         relativePath: "sitectx/updates.json",
         content: stableJson(updates),
         data: updates
@@ -63,7 +71,7 @@ export function buildArtifacts(config, options = {}) {
 }
 
 export function buildInitFiles(options = {}) {
-  const config = createDefaultConfig(options);
+  const config = options.config || createDefaultConfig(options);
   const artifacts = buildArtifacts(config, options);
   return {
     config,

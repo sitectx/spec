@@ -8,10 +8,12 @@ export function createContext(config, generatedAt) {
     source_url: section.url,
     observed_at: generatedAt,
     title: section.title,
+    page_role: section.role,
     summary: section.summary
   }));
+  const identity = config.identity || {};
 
-  return {
+  const context = {
     specVersion: "0.1",
     sitectx_version: "0.1",
     kind: "sitectx.context",
@@ -19,9 +21,12 @@ export function createContext(config, generatedAt) {
       name: config.name,
       url: config.siteUrl,
       description: config.description,
-      language: config.language
+      language: config.language,
+      ...(identity.logo ? { logo: identity.logo } : {}),
+      ...(identity.profiles?.length ? { profiles: identity.profiles } : {})
     },
     publisher: config.publisher,
+    ...(Object.keys(identity).length > 0 ? { identity } : {}),
     freshness: {
       status: "fresh",
       generated_at: generatedAt
@@ -30,6 +35,7 @@ export function createContext(config, generatedAt) {
     resources: {
       manifest: absoluteUrl(config.siteUrl, "/.well-known/sitectx"),
       self: absoluteUrl(config.siteUrl, "/sitectx.json"),
+      catalogs: absoluteUrl(config.siteUrl, "/sitectx/catalogs.json"),
       updates_json: absoluteUrl(config.siteUrl, "/sitectx/updates.json"),
       updates: absoluteUrl(config.siteUrl, "/sitectx/updates.ndjson")
     },
@@ -52,4 +58,34 @@ export function createContext(config, generatedAt) {
     sections: config.sections,
     records
   };
+
+  if (config.positioning) {
+    context.positioning = config.positioning;
+  }
+  if (config.canonicalFacts?.length) {
+    context.canonicalFacts = config.canonicalFacts;
+  }
+  if (config.products?.length) {
+    context.products = config.products;
+  }
+  if (config.claims?.length) {
+    context.claims = config.claims;
+  }
+  if (config.faq?.length) {
+    context.faq = config.faq;
+  }
+  if (config.actions?.length) {
+    context.actions = config.actions;
+  }
+  if (config.navigation?.length) {
+    context.navigation = config.navigation;
+  }
+  if (config.catalogs?.length) {
+    context.catalogs = config.catalogs;
+  }
+  if (config.sourcePages?.length) {
+    context.sourcePages = config.sourcePages;
+  }
+
+  return context;
 }

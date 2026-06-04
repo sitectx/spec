@@ -17,6 +17,7 @@ export function artifactPaths(root = ".") {
     manifest: path.join(resolvedRoot, ".well-known", "sitectx"),
     manifestAlias: path.join(resolvedRoot, ".well-known", "sitectx.json"),
     context: path.join(resolvedRoot, "sitectx.json"),
+    catalogs: path.join(resolvedRoot, "sitectx", "catalogs.json"),
     updates: path.join(resolvedRoot, "sitectx", "updates.json"),
     ndjson: path.join(resolvedRoot, "sitectx", "updates.ndjson"),
     evidence: path.join(resolvedRoot, "sitectx", "evidence.json"),

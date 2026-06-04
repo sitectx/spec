@@ -48,8 +48,22 @@
         "url": {
           "type": "string",
           "format": "uri"
+        },
+        "logo": {
+          "type": "string",
+          "format": "uri"
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         }
       }
+    },
+    "identity": {
+      "$ref": "#/$defs/identity"
     },
     "sections": {
       "type": "array",
@@ -107,6 +121,18 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/reviewableItem"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "catalogs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/catalog"
       }
     },
     "sourcePages": {
@@ -167,6 +193,11 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 2000
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
         }
       }
     },
@@ -236,6 +267,11 @@
           "type": "string",
           "maxLength": 500
         },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
         "lastReviewedAt": {
           "type": [
             "string",
@@ -252,6 +288,170 @@
             "string",
             "null"
           ]
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "url",
+        "label"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sourceText": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "logo": {
+          "type": "string",
+          "format": "uri"
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "telephone": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "status",
+        "url",
+        "label"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "detected",
+            "configured",
+            "missing",
+            "stale",
+            "error"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "format": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "requiresSetup": {
+          "type": "boolean"
+        },
+        "sampleUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

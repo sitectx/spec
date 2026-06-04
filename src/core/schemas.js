@@ -42,6 +42,7 @@ export async function getValidators() {
     contextSchema,
     updatesSchema,
     updateSchema,
+    catalogsSchema,
     configSchema,
     sitectxSchema
   ] = await Promise.all([
@@ -49,6 +50,7 @@ export async function getValidators() {
     loadSchema("context.schema.json"),
     loadSchema("updates.schema.json"),
     loadSchema("update.schema.json"),
+    loadSchema("catalogs.schema.json"),
     loadSchema("config.schema.json"),
     loadSchema("sitectx.schema.json")
   ]);
@@ -60,6 +62,7 @@ export async function getValidators() {
     context: ajv.compile(contextSchema),
     updates: ajv.compile(updatesSchema),
     update: ajv.getSchema(updateSchema.$id),
+    catalogs: ajv.compile(catalogsSchema),
     config: ajv.compile(configSchema),
     sitectx: ajv.compile(sitectxSchema)
   };

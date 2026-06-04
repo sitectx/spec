@@ -62,7 +62,9 @@ function addConfigSemanticErrors(config, errors) {
     ["canonicalFacts", config.canonicalFacts],
     ["products", config.products],
     ["claims", config.claims],
-    ["faq", config.faq]
+    ["faq", config.faq],
+    ["actions", config.actions],
+    ["catalogs", config.catalogs]
   ];
   for (const [name, values] of duplicateChecks) {
     addDuplicateIdErrors(name, values, errors);
@@ -75,6 +77,12 @@ function addConfigSemanticErrors(config, errors) {
   const urlFields = [
     ["$.siteUrl", config.siteUrl],
     ["$.publisher.url", config.publisher?.url],
+    ["$.publisher.logo", config.publisher?.logo],
+    ...arrayValues(config.publisher?.profiles, "$.publisher.profiles"),
+    ["$.identity.url", config.identity?.url],
+    ["$.identity.logo", config.identity?.logo],
+    ["$.identity.sourceUrl", config.identity?.sourceUrl],
+    ...arrayValues(config.identity?.profiles, "$.identity.profiles"),
     ...fieldValues(config.sections, "url", "$.sections"),
     ...fieldValues(config.sourcePages, "url", "$.sourcePages"),
     ...fieldValues(config.canonicalFacts, "sourceUrl", "$.canonicalFacts"),
@@ -82,6 +90,10 @@ function addConfigSemanticErrors(config, errors) {
     ...fieldValues(config.products, "sourceUrl", "$.products"),
     ...fieldValues(config.claims, "sourceUrl", "$.claims"),
     ...fieldValues(config.faq, "sourceUrl", "$.faq"),
+    ...fieldValues(config.actions, "url", "$.actions"),
+    ...fieldValues(config.catalogs, "url", "$.catalogs"),
+    ...fieldValues(config.catalogs, "sourceUrl", "$.catalogs"),
+    ...fieldValues(config.catalogs, "sampleUrl", "$.catalogs"),
     ...fieldValues(config.discoveryCandidates?.claims, "sourceUrl", "$.discoveryCandidates.claims"),
     ...fieldValues(config.discoveryCandidates?.faq, "sourceUrl", "$.discoveryCandidates.faq"),
     ...fieldValues(config.discoveryCandidates?.pages, "url", "$.discoveryCandidates.pages"),
@@ -96,6 +108,7 @@ function addConfigSemanticErrors(config, errors) {
   const dateFields = [
     ...fieldValues(config.sourcePages, "lastReviewedAt", "$.sourcePages"),
     ...fieldValues(config.sourcePages, "discoveredAt", "$.sourcePages"),
+    ...fieldValues(config.catalogs, "observedAt", "$.catalogs"),
     ...fieldValues(config.updates, "publishedAt", "$.updates"),
     ["$.discovery.generatedAt", config.discovery?.generatedAt]
   ];
@@ -142,6 +155,13 @@ function fieldValues(values, field, basePath) {
     return [];
   }
   return values.map((value, index) => [`${basePath}[${index}].${field}`, value?.[field]]);
+}
+
+function arrayValues(values, basePath) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  return values.map((value, index) => [`${basePath}[${index}]`, value]);
 }
 
 function isValidHttpUrl(value) {

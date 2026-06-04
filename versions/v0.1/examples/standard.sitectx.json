@@ -15,8 +15,18 @@
     "expires_at": "2026-06-01T16:30:00Z",
     "next_update_at": "2026-06-01T10:00:00Z"
   },
+  "identity": {
+    "name": "Riverton Bikes",
+    "url": "https://www.rivertonbikes.example/",
+    "description": "Independent bicycle shop with service, rentals, and local ride updates.",
+    "profiles": [
+      "https://www.instagram.com/rivertonbikes.example"
+    ],
+    "sourceUrl": "https://www.rivertonbikes.example/"
+  },
   "resources": {
     "self": "https://www.rivertonbikes.example/.well-known/sitectx",
+    "catalogs": "https://www.rivertonbikes.example/sitectx/catalogs.json",
     "updates": "https://www.rivertonbikes.example/sitectx/updates.ndjson",
     "updates_json": "https://www.rivertonbikes.example/sitectx/updates.json",
     "evidence": "https://www.rivertonbikes.example/sitectx/evidence.json"
@@ -29,6 +39,26 @@
     "https://www.rivertonbikes.example/sitemap.xml",
     "https://www.rivertonbikes.example/blog/",
     "https://www.rivertonbikes.example/service/"
+  ],
+  "actions": [
+    {
+      "id": "action:service",
+      "type": "book",
+      "url": "https://www.rivertonbikes.example/service/",
+      "label": "Book service",
+      "priority": 1,
+      "sourceUrl": "https://www.rivertonbikes.example/",
+      "sourceText": "Book service"
+    },
+    {
+      "id": "action:contact",
+      "type": "contact",
+      "url": "https://www.rivertonbikes.example/contact/",
+      "label": "Contact",
+      "priority": 2,
+      "sourceUrl": "https://www.rivertonbikes.example/",
+      "sourceText": "Contact"
+    }
   ],
   "feeds": [
     {

@@ -2,7 +2,16 @@
   "sitectx_version": "0.1",
   "site": {
     "url": "https://example.com/",
-    "name": "Example Site"
+    "name": "Example Site",
+    "description": "Example Site publishes concise product information and company updates.",
+    "language": "en"
+  },
+  "summary": "Example Site publishes concise product information and company updates.",
+  "identity": {
+    "name": "Example Site",
+    "url": "https://example.com/",
+    "description": "Example Site publishes concise product information and company updates.",
+    "sourceUrl": "https://example.com/"
   },
   "freshness": {
     "status": "fresh",
@@ -14,7 +23,20 @@
       "type": "page",
       "url": "https://example.com/",
       "observed_at": "2026-05-31T13:58:00Z",
-      "title": "Example Site"
+      "title": "Example Site",
+      "page_role": "home",
+      "summary": "Homepage and primary source for Example Site."
+    }
+  ],
+  "actions": [
+    {
+      "id": "action:contact",
+      "type": "contact",
+      "url": "https://example.com/contact",
+      "label": "Contact",
+      "priority": 1,
+      "sourceUrl": "https://example.com/",
+      "sourceText": "Contact"
     }
   ]
 }

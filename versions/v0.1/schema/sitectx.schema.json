@@ -27,6 +27,18 @@
         "$ref": "#/$defs/record"
       }
     },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "catalogs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/catalog"
+      }
+    },
     "resources": {
       "$ref": "#/$defs/resources"
     },
@@ -54,6 +66,9 @@
           "type": "string"
         }
       }
+    },
+    "identity": {
+      "$ref": "#/$defs/identity"
     },
     "license": {
       "oneOf": [
@@ -97,7 +112,14 @@
         "language": {
           "type": "string"
         },
+        "logo": {
+          "type": "string",
+          "format": "uri"
+        },
         "same_as": {
+          "$ref": "#/$defs/urlArray"
+        },
+        "profiles": {
           "$ref": "#/$defs/urlArray"
         }
       }
@@ -177,6 +199,10 @@
         "evidence": {
           "type": "string",
           "format": "uri"
+        },
+        "catalogs": {
+          "type": "string",
+          "format": "uri"
         }
       }
     },
@@ -253,6 +279,9 @@
         "page_role": {
           "type": "string"
         },
+        "role": {
+          "type": "string"
+        },
         "name": {
           "type": "string"
         },
@@ -313,6 +342,142 @@
         },
         "severity": {
           "type": "string"
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "url",
+        "label"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sourceText": {
+          "type": "string"
+        }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "description": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string",
+          "format": "uri"
+        },
+        "profiles": {
+          "$ref": "#/$defs/urlArray"
+        },
+        "telephone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "status",
+        "url",
+        "label"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "type": "string"
+        },
+        "requiresSetup": {
+          "type": "boolean"
+        },
+        "sampleUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "observedAt": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

@@ -1,0 +1,49 @@
+{
+  "specVersion": "0.1",
+  "kind": "sitectx.catalogs",
+  "site": {
+    "name": "Riverton Bikes",
+    "url": "https://www.rivertonbikes.example/"
+  },
+  "generatedAt": "2026-05-31T16:30:00Z",
+  "resources": {
+    "manifest": "https://www.rivertonbikes.example/.well-known/sitectx",
+    "context": "https://www.rivertonbikes.example/sitectx.json",
+    "self": "https://www.rivertonbikes.example/sitectx/catalogs.json"
+  },
+  "catalogs": [
+    {
+      "id": "catalog:shopify-products",
+      "type": "products",
+      "status": "detected",
+      "source": "shopify",
+      "url": "https://www.rivertonbikes.example/products.json",
+      "label": "Shopify product catalog",
+      "format": "shopify.products.json",
+      "requiresSetup": false,
+      "sourceUrl": "https://www.rivertonbikes.example/",
+      "observedAt": "2026-05-31T16:30:00Z",
+      "confidence": 0.95,
+      "notes": [
+        "Verify the catalog endpoint and freshness before treating it as authoritative."
+      ]
+    },
+    {
+      "id": "catalog:jsonld-products",
+      "type": "products",
+      "status": "detected",
+      "source": "json-ld",
+      "url": "https://www.rivertonbikes.example/service/spring-tune-up/",
+      "label": "Product or service structured data",
+      "format": "schema.org.Product",
+      "requiresSetup": true,
+      "sourceUrl": "https://www.rivertonbikes.example/service/spring-tune-up/",
+      "sampleUrl": "https://www.rivertonbikes.example/service/spring-tune-up/",
+      "observedAt": "2026-05-31T16:30:00Z",
+      "confidence": 0.7,
+      "notes": [
+        "Detected Product or Service JSON-LD on crawled pages. This is a sample signal, not a complete catalog."
+      ]
+    }
+  ]
+}

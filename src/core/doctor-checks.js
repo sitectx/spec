@@ -108,6 +108,16 @@ export async function doctorRemote(options = {}) {
     validator: validators.context
   });
 
+  const catalogsUrl = resolveRemoteLink(normalized, manifest.catalogs?.url);
+  await fetchAndValidateJson({
+    collector,
+    url: catalogsUrl,
+    label: "catalogs",
+    required: false,
+    timeout,
+    validator: validators.catalogs
+  });
+
   const updatesUrl = resolveRemoteLink(normalized, manifest.updates?.url);
   await fetchAndValidateJson({
     collector,

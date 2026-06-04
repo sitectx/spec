@@ -5,10 +5,11 @@ Status: Draft
 ## 1. Introduction
 
 SiteCTX is a machine-readable context layer for websites. SiteCTX consists of a
-required JSON manifest and optional linked update feeds and public evidence
-resources. A SiteCTX manifest lets a site publish fresh, structured context for
-automated systems, including important pages, entities, offers, updates,
-freshness metadata, resource links, feed links, and supporting source URLs.
+required JSON manifest and optional linked catalog indexes, update feeds, and
+public evidence resources. A SiteCTX manifest lets a site publish fresh,
+structured context for automated systems, including important pages, entities,
+offers, updates, actions, catalog pointers, freshness metadata, resource links,
+feed links, and supporting source URLs.
 
 SiteCTX complements the website. Source pages remain the authoritative resources
 for human readers, crawlers, search engines, accessibility tools, archives, and
@@ -44,6 +45,13 @@ Record:
 : A JSON object in the manifest `records` array, or in a linked update feed,
   describing a page, entity, offer, or update.
 
+Action:
+: A JSON object that describes a user intent available on the site, such as
+  donate, contact, book, buy, sign up, subscribe, apply, download, or search.
+  Actions SHOULD include a stable `id`, machine-readable `type`, target `url`,
+  human-readable `label`, and MAY include `priority`, `sourceUrl`, and
+  `sourceText`.
+
 Source URL:
 : A URL for supporting source material. The source URL should identify the page
   or resource from which the record can be verified or understood.
@@ -51,6 +59,12 @@ Source URL:
 Evidence resource:
 : Public supporting source material linked from a manifest, update record, or
   evidence index.
+
+Catalog:
+: A pointer to a dynamic collection, feed, API, or source-system export such as
+  products, listings, jobs, events, menus, locations, services, or offers.
+  Catalogs let large sites publish where fresh collection data lives without
+  requiring the manifest to contain every item.
 
 Freshness:
 : Metadata describing when the manifest was generated and whether the publisher
@@ -85,7 +99,9 @@ The conventional current context snapshot path is:
 `/sitectx.json` is not a manifest alias. It is a linked context snapshot that
 the discovery manifest MAY point to.
 
-The manifest is the SiteCTX entry point and index. It MAY link to additional
+The manifest is the SiteCTX entry point. It SHOULD include compact site context
+that is useful on first fetch, such as site description, summary, freshness, and
+a short list of important records and actions. It MAY also link to additional
 SiteCTX resources. Updates and evidence resources are optional linked resources;
 they are not required for minimal conformance.
 
@@ -94,12 +110,16 @@ Optional conventional resource paths are:
 ```text
 /sitectx/updates.ndjson
 /sitectx/updates.json
+/sitectx/catalogs.json
 /sitectx/evidence.json
 /sitectx/evidence/{id}.json
 ```
 
 `/sitectx/updates.ndjson` is the preferred append-style update stream.
 `/sitectx/updates.json` is an optional JSON snapshot of recent update records.
+`/sitectx/catalogs.json` is an optional catalog pointer index for dynamic
+collections such as products, listings, jobs, events, menus, locations, services,
+or offers.
 `/sitectx/evidence.json` is an optional public evidence index.
 `/sitectx/evidence/{id}.json` is an optional individual public evidence record.
 
@@ -152,6 +172,21 @@ the `feeds` array, record-level URLs, or extension fields.
 
 `records`:
 : REQUIRED array. Contains zero or more record objects. See Section 7.
+
+`actions`:
+: OPTIONAL array. Contains zero or more action objects that identify important
+  user intents and the URLs where those intents can be completed.
+
+`catalogs`:
+: OPTIONAL object or array. In the generated CLI manifest this is a link object
+  pointing to `/sitectx/catalogs.json`. In context snapshots or legacy manifests,
+  publishers MAY include catalog pointer objects directly.
+
+`identity`:
+: OPTIONAL object. Describes publisher identity extracted from explicit site
+  metadata or publisher-maintained structured data. It MAY include `name`,
+  `url`, `description`, `logo`, `profiles`, `telephone`, `email`, `address`, and
+  `sourceUrl`.
 
 `resources`:
 : OPTIONAL object. Links to related SiteCTX resources, such as the manifest
@@ -337,6 +372,7 @@ SiteCTX resources. Known fields are:
 | Field | Description |
 | --- | --- |
 | `self` | URL of the manifest. |
+| `catalogs` | Optional catalog pointer index URL. |
 | `updates` | Preferred NDJSON update feed URL. |
 | `updates_json` | Optional JSON update snapshot URL. |
 | `evidence` | Optional public evidence index URL. |
@@ -347,6 +383,7 @@ For example:
 {
   "resources": {
     "self": "https://example.com/.well-known/sitectx",
+    "catalogs": "https://example.com/sitectx/catalogs.json",
     "updates": "https://example.com/sitectx/updates.ndjson",
     "updates_json": "https://example.com/sitectx/updates.json",
     "evidence": "https://example.com/sitectx/evidence.json"
@@ -358,7 +395,29 @@ Unknown `resources` fields MUST be tolerated by consumers. Publishers SHOULD use
 absolute URLs for known `resources` fields when those resources are publicly
 available.
 
-### 8.2 Feeds
+### 8.2 Catalog Index
+
+The optional `/sitectx/catalogs.json` resource is a JSON object containing a
+`catalogs` array. Catalog entries identify dynamic collection surfaces without
+requiring the SiteCTX manifest to contain every item.
+
+Catalog entries SHOULD include:
+
+- `id`: stable catalog identifier.
+- `type`: collection type such as `products`, `listings`, `jobs`, `events`,
+  `menus`, `locations`, `services`, or `offers`.
+- `status`: `detected`, `configured`, `missing`, `stale`, or `error`.
+- `url`: URL of the source feed, API, collection page, or setup target.
+- `label`: human-readable label.
+
+Catalog entries MAY include `source`, `format`, `requiresSetup`, `sourceUrl`,
+`sampleUrl`, `observedAt`, `confidence`, and `notes`.
+
+`requiresSetup: true` means the publisher should configure a source-system
+connector, hosted feed, or validated export before consumers treat the catalog
+as complete and fresh.
+
+### 8.3 Feeds
 
 The optional top-level `feeds` array links to related streams. A feed object
 SHOULD include:
