@@ -60,6 +60,9 @@
     },
     "evidence": {
       "$ref": "#/$defs/link"
+    },
+    "commercialContext": {
+      "$ref": "#/$defs/commercialContext"
     }
   },
   "additionalProperties": true,
@@ -175,6 +178,51 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 100
+        }
+      }
+    },
+    "commercialContext": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "sponsoredContextUrl",
+        "policy"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "const": true
+        },
+        "sponsoredContextUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "policy": {
+          "type": "object",
+          "required": [
+            "sponsoredContentMustBeDisclosed",
+            "agentClicksAreNotBillable",
+            "requiresCanonicalLandingPage"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "sponsoredContentMustBeDisclosed": {
+              "const": true
+            },
+            "agentClicksAreNotBillable": {
+              "const": true
+            },
+            "paidPlacementsAllowed": {
+              "type": "boolean"
+            },
+            "affiliateLinksAllowed": {
+              "type": "boolean"
+            },
+            "requiresCanonicalLandingPage": {
+              "const": true
+            }
+          }
         }
       }
     },

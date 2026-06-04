@@ -4,6 +4,7 @@ import { fetchText } from "./remote-fetch.js";
 import { scanForSecrets } from "./secrets.js";
 import { getValidators } from "./schemas.js";
 import { createCollector, summarizeChecks, validateLocalArtifacts, validateWithSchema } from "./validation.js";
+import { addSponsoredContextChecks } from "./commercial-context.js";
 import { discoveryUrlForSite, isLocalhostUrl, safeUrl } from "./urls.js";
 
 const PROHIBITED_CLAIMS = [
@@ -148,10 +149,23 @@ export async function doctorRemote(options = {}) {
     });
   }
 
+  const sponsoredContextUrl = resolveRemoteLink(normalized, manifest.commercialContext?.sponsoredContextUrl);
+  if (sponsoredContextUrl) {
+    await fetchAndValidateJson({
+      collector,
+      url: sponsoredContextUrl,
+      label: "sponsoredContext",
+      required: false,
+      timeout,
+      validator: validators.sponsoredContext,
+      afterValidate: (value) => addSponsoredContextChecks(collector, sponsoredContextUrl, value)
+    });
+  }
+
   return summarizeChecks(collector.checks, Boolean(options.strict));
 }
 
-async function fetchAndValidateJson({ collector, url, label, required, timeout, validator }) {
+async function fetchAndValidateJson({ collector, url, label, required, timeout, validator, afterValidate }) {
   if (!url) {
     const method = required ? "fail" : "warn";
     collector[method](`${label}.url`, label, `${label} URL is missing from the manifest.`);
@@ -187,6 +201,9 @@ async function fetchAndValidateJson({ collector, url, label, required, timeout, 
   }
   addSecretChecks(collector, url, value);
   addClaimChecks(collector, url, JSON.stringify(value));
+  if (typeof afterValidate === "function") {
+    afterValidate(value);
+  }
 }
 
 async function fetchAndValidateNdjson({ collector, url, timeout, validator }) {

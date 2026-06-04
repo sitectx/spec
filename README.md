@@ -189,6 +189,93 @@ systems without crawling every item:
 }
 ```
 
+## Sponsored Context
+
+Sponsored Context lets a site publish disclosed, machine-readable commercial
+placements for agents and automated systems. It is not a click-fraud,
+bot-impression, cloaking, keyword-stuffing, or ranking mechanism. Automated
+fetches, crawler visits, bot impressions, and agent clicks must not be
+represented as human ad engagement.
+
+Sponsored Context is disabled by default. Enable it only when you intentionally
+want to publish disclosed commercial placements:
+
+```bash
+npx sitectx@latest sponsor init --enable
+npx sitectx@latest sponsor add \
+  --name "Price Papertrail" \
+  --url "https://pricepapertrail.com" \
+  --title "Defensible records for pricing changes" \
+  --summary "Create evidence packets for pricing page changes, reviews, and decisions." \
+  --category "compliance_software" \
+  --price "$250/month" \
+  --currency "USD" \
+  --valid-until "2026-07-04" \
+  --canonical-action-url "https://pricepapertrail.com/pilot" \
+  --canonical-action-label "Request pilot" \
+  --relationship "paid_placement"
+npx sitectx@latest sponsor validate
+npx sitectx@latest sponsor build --force
+```
+
+When enabled, SiteCTX writes:
+
+```text
+/sitectx/sponsored-context.json
+```
+
+and links it from the manifest and context with a `commercialContext` policy.
+The file uses disclosed placements:
+
+```json
+{
+  "id": "spn_example_001",
+  "type": "sponsored_offer",
+  "status": "active",
+  "sponsor": {
+    "name": "Example Sponsor",
+    "url": "https://sponsor.example"
+  },
+  "disclosure": {
+    "label": "Sponsored",
+    "relationship": "paid_placement",
+    "plainLanguage": "This is a paid placement from Example Sponsor."
+  },
+  "canonicalAction": {
+    "label": "Request pilot",
+    "url": "https://sponsor.example/pilot",
+    "actionType": "lead_form"
+  },
+  "measurement": {
+    "billableEvents": [
+      "sponsored_listing_active",
+      "verified_human_lead",
+      "qualified_conversion"
+    ],
+    "nonBillableEvents": [
+      "agent_fetch",
+      "agent_click",
+      "crawler_visit",
+      "bot_impression"
+    ]
+  }
+}
+```
+
+Validation fails if a sponsored placement lacks disclosure, sponsor identity, a
+canonical action URL, valid dates, or marks automated agent, crawler, bot,
+click, fetch, visit, or impression events as billable. Validation warns on weak
+evidence, missing human-visible disclosure references, domain mismatches, long
+summaries, and relevant-query stuffing.
+
+Non-goals:
+
+- Not fake PPC.
+- Not hidden ad inventory.
+- Not SEO keyword stuffing.
+- Not a ranking guarantee.
+- Not a way to bill advertisers for bot traffic.
+
 ## Review Gate
 
 `discover` writes a review-required draft:
@@ -251,6 +338,9 @@ npx sitectx@latest init --preset ecommerce
 npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
 npx sitectx@latest review sitectx.config.draft.json
 npx sitectx@latest generate sitectx.config.draft.json ./public --force
+npx sitectx@latest sponsor init --enable
+npx sitectx@latest sponsor validate
+npx sitectx@latest sponsor build --force
 npx sitectx@latest validate ./public
 npx sitectx@latest doctor ./public
 npx sitectx@latest inspect ./public
@@ -266,6 +356,7 @@ Repository references:
 - [versions/v0.1/SPEC.md](versions/v0.1/SPEC.md)
 - [versions/v0.1/schema/sitectx.schema.json](versions/v0.1/schema/sitectx.schema.json)
 - [versions/v0.1/schema/catalogs.schema.json](versions/v0.1/schema/catalogs.schema.json)
+- [versions/v0.1/schema/sponsored-context.schema.json](versions/v0.1/schema/sponsored-context.schema.json)
 - [versions/v0.1/examples](versions/v0.1/examples)
 
 ## Local Development

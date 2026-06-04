@@ -1,4 +1,5 @@
 import path from "node:path";
+import { isCommercialContextEnabled, sponsoredContextOutputPath } from "./commercial-context.js";
 import { safeJsonStringify } from "./json-hygiene.js";
 import { stringifyNdjson } from "./ndjson.js";
 import { artifactPaths, displayPath } from "./filesystem.js";
@@ -7,6 +8,7 @@ import { createCatalogs } from "../templates/catalogs.js";
 import { createDefaultConfig } from "../templates/default-config.js";
 import { createManifest } from "../templates/manifest.js";
 import { createNdjsonUpdates, createUpdates } from "../templates/updates.js";
+import { createSponsoredContextArtifact } from "../templates/sponsored-context.js";
 
 export const GENERATED_ARTIFACTS = [
   ".well-known/sitectx",
@@ -33,6 +35,9 @@ export function buildArtifacts(config, options = {}) {
   const catalogs = createCatalogs(config, generatedAt);
   const updates = createUpdates(config, generatedAt);
   const ndjsonUpdates = createNdjsonUpdates(config, generatedAt);
+  const sponsoredContext = isCommercialContextEnabled(config)
+    ? createSponsoredContextArtifact(config, generatedAt)
+    : null;
 
   return {
     generatedAt,
@@ -66,7 +71,16 @@ export function buildArtifacts(config, options = {}) {
         relativePath: "sitectx/updates.ndjson",
         content: stringifyNdjson(ndjsonUpdates),
         data: ndjsonUpdates
-      }
+      },
+      ...(sponsoredContext
+        ? [
+            {
+              relativePath: sponsoredContextOutputPath(config),
+              content: stableJson(sponsoredContext),
+              data: sponsoredContext
+            }
+          ]
+        : [])
     ]
   };
 }

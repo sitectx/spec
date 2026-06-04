@@ -145,6 +145,9 @@
         "$ref": "#/$defs/catalog"
       }
     },
+    "commercialContext": {
+      "$ref": "#/$defs/commercialContext"
+    },
     "sourcePages": {
       "type": "array",
       "items": {
@@ -461,6 +464,31 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "commercialContext": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "outputPath",
+        "placements"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "outputPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "placements": {
+          "type": "array",
+          "items": {
+            "$ref": "sponsored-context.schema.json#/$defs/placement"
           }
         }
       }

@@ -1,3 +1,5 @@
+import { commercialContextLink } from "../core/commercial-context.js";
+
 export function createManifest(config, generatedAt) {
   const summary = config.positioning?.summary || config.description;
   const records = (config.sections || []).slice(0, 10).map((section) => ({
@@ -11,6 +13,7 @@ export function createManifest(config, generatedAt) {
   const actions = (config.actions || []).slice(0, 20);
   const navigation = (config.navigation || []).slice(0, 20);
   const identity = config.identity || {};
+  const commercialContext = commercialContextLink(config);
 
   return {
     specVersion: "0.1",
@@ -48,6 +51,7 @@ export function createManifest(config, generatedAt) {
     updatesNdjson: {
       url: "/sitectx/updates.ndjson",
       contentType: "application/x-ndjson"
-    }
+    },
+    ...(commercialContext ? { commercialContext } : {})
   };
 }

@@ -9,6 +9,7 @@ import {
 import { parseNdjson } from "./ndjson.js";
 import { scanForSecrets } from "./secrets.js";
 import { formatSchemaErrors, getValidators } from "./schemas.js";
+import { addSponsoredContextChecks } from "./commercial-context.js";
 import { isRelativePublicUrl } from "./urls.js";
 
 export function createCollector() {
@@ -49,7 +50,8 @@ export async function validateLocalArtifacts(options = {}) {
     context: path.resolve(options.context || defaults.context),
     catalogs: path.resolve(options.catalogs || defaults.catalogs),
     updates: path.resolve(options.updates || defaults.updates),
-    ndjson: path.resolve(options.ndjson || defaults.ndjson)
+    ndjson: path.resolve(options.ndjson || defaults.ndjson),
+    sponsoredContext: path.resolve(options.sponsoredContext || defaults.sponsoredContext)
   };
   const collector = createCollector();
   const parsed = {};
@@ -143,6 +145,16 @@ export async function validateLocalArtifacts(options = {}) {
       validator: validators.catalogs
     });
   }
+  const sponsoredContextLink = parsed.manifest?.commercialContext?.sponsoredContextUrl;
+  if (sponsoredContextLink || (await fileExists(paths.sponsoredContext))) {
+    parsed.sponsoredContext = await readJsonArtifact({
+      collector,
+      root,
+      filePath: sponsoredContextLink ? resolvePublicPath(root, sponsoredContextLink) || paths.sponsoredContext : paths.sponsoredContext,
+      key: "sponsoredContext",
+      validator: validators.sponsoredContext
+    });
+  }
   parsed.updates = await readJsonArtifact({
     collector,
     root,
@@ -204,6 +216,13 @@ export async function validateLocalArtifacts(options = {}) {
     validateStringLengths(collector, catalogsTarget, parsed.catalogs);
     addSecretChecks(collector, catalogsTarget, parsed.catalogs);
   }
+  if (parsed.sponsoredContext) {
+    const sponsoredTarget = displayPath(root, paths.sponsoredContext);
+    validateUniqueField(collector, "sponsoredContext.ids", sponsoredTarget, parsed.sponsoredContext.placements, "id", "Sponsored placement IDs are unique.");
+    validateStringLengths(collector, sponsoredTarget, parsed.sponsoredContext);
+    addSponsoredContextChecks(collector, sponsoredTarget, parsed.sponsoredContext);
+    addSecretChecks(collector, sponsoredTarget, parsed.sponsoredContext);
+  }
   if (parsed.updates) {
     const updatesTarget = displayPath(root, paths.updates);
     validateUniqueField(collector, "updates.ids", updatesTarget, parsed.updates.updates, "id", "Update IDs are unique.");
@@ -260,6 +279,7 @@ async function validateManifestLinks({ collector, root, manifest }) {
     ["catalogs", manifest.catalogs?.url, "sitectx/catalogs.json", true],
     ["updates", manifest.updates?.url, "sitectx/updates.json"],
     ["updatesNdjson", manifest.updatesNdjson?.url, "sitectx/updates.ndjson"],
+    ["sponsoredContext", manifest.commercialContext?.sponsoredContextUrl, "sitectx/sponsored-context.json", true],
     ["evidence", manifest.evidence?.url, "sitectx/evidence.json", true]
   ];
 

@@ -1,3 +1,4 @@
+import { commercialContextLink, sponsoredContextPublicUrl } from "../core/commercial-context.js";
 import { absoluteUrl } from "../core/urls.js";
 
 export function createContext(config, generatedAt) {
@@ -12,6 +13,7 @@ export function createContext(config, generatedAt) {
     summary: section.summary
   }));
   const identity = config.identity || {};
+  const commercialContext = commercialContextLink(config);
 
   const context = {
     specVersion: "0.1",
@@ -38,7 +40,8 @@ export function createContext(config, generatedAt) {
       self: absoluteUrl(config.siteUrl, "/sitectx.json"),
       catalogs: absoluteUrl(config.siteUrl, "/sitectx/catalogs.json"),
       updates_json: absoluteUrl(config.siteUrl, "/sitectx/updates.json"),
-      updates: absoluteUrl(config.siteUrl, "/sitectx/updates.ndjson")
+      updates: absoluteUrl(config.siteUrl, "/sitectx/updates.ndjson"),
+      ...(commercialContext ? { sponsoredContext: absoluteUrl(config.siteUrl, sponsoredContextPublicUrl(config)) } : {})
     },
     feeds: [
       {
@@ -86,6 +89,12 @@ export function createContext(config, generatedAt) {
   }
   if (config.sourcePages?.length) {
     context.sourcePages = config.sourcePages;
+  }
+  if (commercialContext) {
+    context.commercialContext = {
+      ...commercialContext,
+      sponsoredContextUrl: absoluteUrl(config.siteUrl, sponsoredContextPublicUrl(config))
+    };
   }
 
   return context;

@@ -8,6 +8,7 @@ import { registerGenerateCommand } from "./commands/generate.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerReviewCommand } from "./commands/review.js";
+import { registerSponsorCommand } from "./commands/sponsor.js";
 import { registerSetupCommand, runSetupWizard, shouldRunInteractiveWizard } from "./commands/setup.js";
 import { registerValidateCommand } from "./commands/validate.js";
 import { registerVersionCommand } from "./commands/version.js";
@@ -38,11 +39,16 @@ Localhost discovery:
   npx sitectx@latest review sitectx.config.draft.json
   npx sitectx@latest generate sitectx.config.draft.json ./public --force
 
+Sponsored context:
+  npx sitectx@latest sponsor init --enable
+  npx sitectx@latest sponsor validate
+
 Commands:
   init       Create SiteCTX files
   discover   Crawl a site into a review-required draft config
   review     Review a discovered draft config before publishing
   generate   Generate public artifacts from config
+  sponsor    Manage disclosed sponsored commercial context
   validate   Validate local artifacts
   doctor     Diagnose local or remote artifacts
   inspect    Inspect local or remote metadata
@@ -53,6 +59,7 @@ Commands:
   registerInitCommand(program);
   registerDiscoverCommand(program);
   registerReviewCommand(program);
+  registerSponsorCommand(program);
   registerGenerateCommand(program);
   registerValidateCommand(program);
   registerDoctorCommand(program);

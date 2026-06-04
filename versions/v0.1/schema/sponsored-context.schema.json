@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sitectx.org/versions/v0.1/schema/sponsored-context.schema.json",
+  "title": "SiteCTX v0.1 Sponsored Context",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "kind",
+    "site",
+    "generatedAt",
+    "disclosurePolicy",
+    "placements"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "sitectx.sponsoredContext"
+    },
+    "site": {
+      "type": "string",
+      "format": "uri"
+    },
+    "generatedAt": {
+      "$ref": "#/$defs/dateTime"
+    },
+    "disclosurePolicy": {
+      "type": "object",
+      "required": [
+        "defaultLabel",
+        "machineDisclosureRequired",
+        "humanDisclosureRequired",
+        "agentMustPreserveDisclosure"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "defaultLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "machineDisclosureRequired": {
+          "const": true
+        },
+        "humanDisclosureRequired": {
+          "const": true
+        },
+        "agentMustPreserveDisclosure": {
+          "const": true
+        },
+        "agentMaySummarize": {
+          "type": "boolean"
+        }
+      }
+    },
+    "placements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/placement"
+      }
+    }
+  },
+  "$defs": {
+    "placement": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "status",
+        "sponsor",
+        "disclosure",
+        "offer",
+        "canonicalAction"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "sponsored_offer",
+            "affiliate_offer",
+            "partner_offer",
+            "first_party_offer"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "paused",
+            "expired"
+          ]
+        },
+        "sponsor": {
+          "type": "object",
+          "required": [
+            "name",
+            "url"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "disclosure": {
+          "type": "object",
+          "required": [
+            "label",
+            "relationship",
+            "plainLanguage"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "relationship": {
+              "type": "string",
+              "enum": [
+                "paid_placement",
+                "affiliate",
+                "partner",
+                "first_party"
+              ]
+            },
+            "plainLanguage": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "humanVisibleUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "humanVisibleText": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "offer": {
+          "type": "object",
+          "required": [
+            "title",
+            "summary",
+            "category",
+            "validFrom",
+            "validUntil"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "category": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "price": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "validFrom": {
+              "$ref": "#/$defs/date"
+            },
+            "validUntil": {
+              "$ref": "#/$defs/date"
+            },
+            "sponsorClaim": {
+              "type": "boolean"
+            }
+          }
+        },
+        "canonicalAction": {
+          "type": "object",
+          "required": [
+            "label",
+            "url",
+            "actionType"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "actionType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        },
+        "targetingContext": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "intendedAudience": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "type": "string",
+                "maxLength": 120
+              }
+            },
+            "relevantQueries": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "type": "string",
+                "maxLength": 160
+              }
+            }
+          }
+        },
+        "measurement": {
+          "type": "object",
+          "required": [
+            "billableEvents",
+            "nonBillableEvents"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "billableEvents": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 100
+              }
+            },
+            "nonBillableEvents": {
+              "type": "array",
+              "contains": {
+                "const": "agent_fetch"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "const": "agent_click"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "crawler_visit"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "bot_impression"
+                  }
+                }
+              ],
+              "items": {
+                "type": "string",
+                "maxLength": 100
+              }
+            }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "sourceUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "observedAt": {
+              "$ref": "#/$defs/dateTime"
+            },
+            "contentHash": {
+              "type": "string",
+              "pattern": "^sha256:[a-fA-F0-9]{6,}|^sha256:replace_me$"
+            },
+            "evidencePacketUrl": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      }
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

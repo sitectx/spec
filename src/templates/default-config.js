@@ -77,6 +77,11 @@ export function createDefaultConfig(options = {}) {
         title: "Initial SiteCTX context published",
         summary: "Initial machine-readable site context was published."
       }
-    ]
+    ],
+    commercialContext: {
+      enabled: false,
+      outputPath: "sitectx/sponsored-context.json",
+      placements: []
+    }
   }, options.preset);
 }

@@ -11,6 +11,7 @@ describe("CLI help and version", () => {
     expect(result.stdout).toContain("discover");
     expect(result.stdout).toContain("review");
     expect(result.stdout).toContain("generate");
+    expect(result.stdout).toContain("sponsor");
     expect(result.stdout).toContain("validate");
     expect(result.stdout).toContain("doctor");
     expect(result.stdout).toContain("inspect");
@@ -18,6 +19,7 @@ describe("CLI help and version", () => {
     expect(result.stdout).toContain("npx sitectx@latest discover http://localhost:3000 --preset saas --max-pages 25 --max-depth 2");
     expect(result.stdout).toContain("npx sitectx@latest review sitectx.config.draft.json");
     expect(result.stdout).toContain("npx sitectx@latest generate sitectx.config.draft.json ./public --force");
+    expect(result.stdout).toContain("npx sitectx@latest sponsor init --enable");
   });
 
   it("subcommand help shows positional zero-install examples", () => {
@@ -29,6 +31,8 @@ describe("CLI help and version", () => {
     expect(runCli(["review", "--help"]).stdout).toContain("npx sitectx@latest review sitectx.config.draft.json");
     expect(runCli(["generate", "--help"]).stdout).toContain("Usage: sitectx generate [options] [config] [out]");
     expect(runCli(["generate", "--help"]).stdout).toContain("npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force");
+    expect(runCli(["sponsor", "--help"]).stdout).toContain("Usage: sitectx sponsor");
+    expect(runCli(["sponsor", "add", "--help"]).stdout).toContain("--canonical-action-url <url>");
     expect(runCli(["validate", "--help"]).stdout).toContain("npx sitectx@latest validate ./public");
     expect(runCli(["doctor", "--help"]).stdout).toContain("npx sitectx@latest doctor http://localhost:3000");
     expect(runCli(["inspect", "--help"]).stdout).toContain("npx sitectx@latest inspect http://localhost:3000");

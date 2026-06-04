@@ -43,6 +43,7 @@ export async function getValidators() {
     updatesSchema,
     updateSchema,
     catalogsSchema,
+    sponsoredContextSchema,
     configSchema,
     sitectxSchema
   ] = await Promise.all([
@@ -51,11 +52,13 @@ export async function getValidators() {
     loadSchema("updates.schema.json"),
     loadSchema("update.schema.json"),
     loadSchema("catalogs.schema.json"),
+    loadSchema("sponsored-context.schema.json"),
     loadSchema("config.schema.json"),
     loadSchema("sitectx.schema.json")
   ]);
 
   ajv.addSchema(updateSchema);
+  ajv.addSchema(sponsoredContextSchema);
 
   const validators = {
     manifest: ajv.compile(manifestSchema),
@@ -63,6 +66,7 @@ export async function getValidators() {
     updates: ajv.compile(updatesSchema),
     update: ajv.getSchema(updateSchema.$id),
     catalogs: ajv.compile(catalogsSchema),
+    sponsoredContext: ajv.compile(sponsoredContextSchema),
     config: ajv.compile(configSchema),
     sitectx: ajv.compile(sitectxSchema)
   };

@@ -20,6 +20,7 @@ export function artifactPaths(root = ".") {
     catalogs: path.join(resolvedRoot, "sitectx", "catalogs.json"),
     updates: path.join(resolvedRoot, "sitectx", "updates.json"),
     ndjson: path.join(resolvedRoot, "sitectx", "updates.ndjson"),
+    sponsoredContext: path.join(resolvedRoot, "sitectx", "sponsored-context.json"),
     evidence: path.join(resolvedRoot, "sitectx", "evidence.json"),
     legacyUpdates: path.join(resolvedRoot, "updates.json"),
     legacyNdjson: path.join(resolvedRoot, "updates.ndjson"),

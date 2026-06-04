@@ -3,6 +3,7 @@ import { getValidators, formatSchemaErrors } from "./schemas.js";
 import { normalizeSiteUrl } from "./urls.js";
 import { scanForSecrets } from "./secrets.js";
 import { VERTICAL_PRESET_NAMES } from "./presets.js";
+import { addCommercialConfigChecks } from "./commercial-context.js";
 
 export async function loadConfig(configPath) {
   const raw = await readUtf8(configPath);
@@ -137,6 +138,7 @@ function addConfigSemanticErrors(config, errors) {
 
   const prohibitedClaimErrors = prohibitedPublicClaimErrors(config);
   errors.push(...prohibitedClaimErrors);
+  errors.push(...commercialContextErrors(config));
 }
 
 function addDuplicateIdErrors(name, values, errors) {
@@ -207,4 +209,26 @@ function prohibitedPublicClaimErrors(config) {
   return prohibited
     .filter(([, pattern]) => pattern.test(text))
     .map(([label]) => `Public config fields must not describe SiteCTX as ${label}`);
+}
+
+function commercialContextErrors(config) {
+  if (!config.commercialContext) {
+    return [];
+  }
+  const checks = [];
+  const collector = {
+    pass(code, target, message, hint) {
+      checks.push({ level: "PASS", code, target, message, ...(hint ? { hint } : {}) });
+    },
+    warn(code, target, message, hint) {
+      checks.push({ level: "WARN", code, target, message, ...(hint ? { hint } : {}) });
+    },
+    fail(code, target, message, hint) {
+      checks.push({ level: "FAIL", code, target, message, ...(hint ? { hint } : {}) });
+    }
+  };
+  addCommercialConfigChecks(collector, "$.commercialContext", config);
+  return checks
+    .filter((check) => check.level === "FAIL")
+    .map((check) => check.message);
 }
