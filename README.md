@@ -75,6 +75,13 @@ Discovery drafts are review-required by default. A normal generate command will
 fail until the draft is reviewed:
 
 ```bash
+npx sitectx@latest review sitectx.config.draft.json
+```
+
+The review flow lets you approve or edit the discovered summary, actions,
+navigation, catalogs, and source pages before publishing.
+
+```bash
 npx sitectx@latest generate sitectx.config.draft.json ./public
 ```
 
@@ -175,8 +182,12 @@ systems without crawling every item:
 ```
 
 `generate` refuses that draft by default. Review the config and set
-`discovery.status` to `"reviewed"`, or pass `--allow-draft` when you intentionally
-want to generate test artifacts.
+`discovery.status` to `"reviewed"` with `sitectx review`, or pass
+`--allow-draft` when you intentionally want to generate test artifacts.
+
+```bash
+npx sitectx@latest review sitectx.config.draft.json
+```
 
 ## No Install Required
 
@@ -208,15 +219,17 @@ Pass `--public-dir ./public` for app output. If no public directory is detected,
 SiteCTX writes to the selected root.
 
 Draft config needs review:
-Use `generate sitectx.config.draft.json ./public --allow-draft --force` for test
-generation, or review the config and set `discovery.status` to `"reviewed"`.
+Run `review sitectx.config.draft.json` before generate. Use
+`generate sitectx.config.draft.json ./public --allow-draft --force` only for
+test generation.
 
 ## Common Commands
 
 ```bash
 npx sitectx@latest init
 npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
-npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force
+npx sitectx@latest review sitectx.config.draft.json
+npx sitectx@latest generate sitectx.config.draft.json ./public --force
 npx sitectx@latest validate ./public
 npx sitectx@latest doctor ./public
 npx sitectx@latest inspect ./public

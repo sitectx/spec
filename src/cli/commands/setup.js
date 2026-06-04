@@ -224,7 +224,10 @@ async function runDiscoverFlow(prompts) {
   }
   printWarnings(prompts, result.warnings);
   prompts.log.warn("Discovery output is draft_review_required and needs human review before publishing.");
-  printNextCommands([`sitectx generate ${out} public --force`]);
+  printNextCommands([
+    `sitectx review ${out}`,
+    `sitectx generate ${out} public --force`
+  ]);
   writeLine("Review gate: generate requires discovery.status=\"reviewed\" or --allow-draft.");
   return EXIT_SUCCESS;
 }

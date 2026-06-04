@@ -22,6 +22,10 @@ npm exec --cache "$CACHE_DIR" \
 
 npm exec --cache "$CACHE_DIR" \
   --package "$TARBALL" \
+  -- sitectx review --help
+
+npm exec --cache "$CACHE_DIR" \
+  --package "$TARBALL" \
   -- sitectx init --site-url http://localhost:3000 --name "Local Test Site" --force
 
 npm exec --cache "$CACHE_DIR" \

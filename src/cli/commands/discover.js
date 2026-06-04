@@ -38,7 +38,7 @@ Examples:
 
 Behavior:
   Writes sitectx.config.draft.json by default.
-  Draft configs require review before generate unless --allow-draft is used there.
+  Run sitectx review sitectx.config.draft.json before generate.
 `)
     .action(async (url, options) => {
       const resolvedUrl = resolveDiscoverUrl(url, options.url);

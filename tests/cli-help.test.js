@@ -9,19 +9,22 @@ describe("CLI help and version", () => {
     expect(result.stdout).toContain("setup");
     expect(result.stdout).toContain("init");
     expect(result.stdout).toContain("discover");
+    expect(result.stdout).toContain("review");
     expect(result.stdout).toContain("generate");
     expect(result.stdout).toContain("validate");
     expect(result.stdout).toContain("doctor");
     expect(result.stdout).toContain("inspect");
     expect(result.stdout).toContain("npx sitectx@latest init");
     expect(result.stdout).toContain("npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2");
-    expect(result.stdout).toContain("npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force");
+    expect(result.stdout).toContain("npx sitectx@latest review sitectx.config.draft.json");
+    expect(result.stdout).toContain("npx sitectx@latest generate sitectx.config.draft.json ./public --force");
   });
 
   it("subcommand help shows positional zero-install examples", () => {
     expect(runCli(["init", "--help"]).stdout).toContain("npx sitectx@latest init --root . --public-dir ./public");
     expect(runCli(["discover", "--help"]).stdout).toContain("Usage: sitectx discover [options] [url]");
     expect(runCli(["discover", "--help"]).stdout).toContain("npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2");
+    expect(runCli(["review", "--help"]).stdout).toContain("npx sitectx@latest review sitectx.config.draft.json");
     expect(runCli(["generate", "--help"]).stdout).toContain("Usage: sitectx generate [options] [config] [out]");
     expect(runCli(["generate", "--help"]).stdout).toContain("npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force");
     expect(runCli(["validate", "--help"]).stdout).toContain("npx sitectx@latest validate ./public");

@@ -7,6 +7,7 @@ import { registerDoctorCommand } from "./commands/doctor.js";
 import { registerGenerateCommand } from "./commands/generate.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerInspectCommand } from "./commands/inspect.js";
+import { registerReviewCommand } from "./commands/review.js";
 import { registerSetupCommand, runSetupWizard, shouldRunInteractiveWizard } from "./commands/setup.js";
 import { registerValidateCommand } from "./commands/validate.js";
 import { registerVersionCommand } from "./commands/version.js";
@@ -33,11 +34,13 @@ Existing app/static public dir:
 
 Localhost discovery:
   npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
-  npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force
+  npx sitectx@latest review sitectx.config.draft.json
+  npx sitectx@latest generate sitectx.config.draft.json ./public --force
 
 Commands:
   init       Create SiteCTX files
   discover   Crawl a site into a review-required draft config
+  review     Review a discovered draft config before publishing
   generate   Generate public artifacts from config
   validate   Validate local artifacts
   doctor     Diagnose local or remote artifacts
@@ -48,6 +51,7 @@ Commands:
   registerSetupCommand(program);
   registerInitCommand(program);
   registerDiscoverCommand(program);
+  registerReviewCommand(program);
   registerGenerateCommand(program);
   registerValidateCommand(program);
   registerDoctorCommand(program);
