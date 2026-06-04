@@ -164,6 +164,53 @@ describe("discover", () => {
     );
   });
 
+  it("docs preset prioritizes documentation pages over product pages", async () => {
+    const { url } = await startSite({
+      "/": html(
+        "Platform",
+        '<header><nav><a href="/products">Products</a><a href="/docs">Docs</a></nav></header><h1>Platform</h1>'
+      ),
+      "/products": html("Products", "<h1>Products</h1><p>Product catalog.</p>"),
+      "/docs": html("Docs", "<h1>Docs</h1><p>API documentation and guides.</p>")
+    });
+    const root = await makeTempRoot();
+    const out = path.join(root, "draft.json");
+
+    const result = await runCliAsync(["discover", url, "--preset", "docs", "--out", out, "--max-pages", "2", "--force", "--delay-ms", "0"]);
+    const draft = await readJson(out);
+
+    expect(result.status).toBe(0);
+    expect(draft.verticalPreset).toBe("docs");
+    expect(draft.discovery.preset).toBe("docs");
+    expect(draft.sections.map((section) => section.id)).toEqual(["home", "docs"]);
+    expect(draft.catalogs).toEqual([]);
+  });
+
+  it("nonprofit preset ranks donate actions and pages ahead of commerce", async () => {
+    const { url } = await startSite({
+      "/": html(
+        "Mission Site",
+        '<header><nav><a href="/products">Products</a><a href="/donate">Donate</a></nav></header><h1>Mission Site</h1>'
+      ),
+      "/products": html("Products", "<h1>Products</h1><p>Merchandise.</p>"),
+      "/donate": html("Donate", "<h1>Donate</h1><p>Support the mission.</p>")
+    });
+    const root = await makeTempRoot();
+    const out = path.join(root, "draft.json");
+
+    const result = await runCliAsync(["discover", url, "--preset", "nonprofit", "--out", out, "--max-pages", "2", "--force", "--delay-ms", "0"]);
+    const draft = await readJson(out);
+
+    expect(result.status).toBe(0);
+    expect(draft.sections.map((section) => section.id)).toEqual(["home", "donate"]);
+    expect(draft.actions[0]).toMatchObject({
+      id: "action:donate",
+      type: "donate",
+      priority: 1
+    });
+    expect(draft.catalogs).toEqual([]);
+  });
+
   it("enforces same origin for crawl links", async () => {
     const { url } = await startSite({
       "/": html("Home", '<h1>Home</h1><a href="https://example.net/out">External</a><a href="/local">Local</a>'),
@@ -476,6 +523,7 @@ describe("discover", () => {
           "<h1>Home</h1>",
           '<a href="https://www.youtube.com/channel/UCKn_eMWiWw-F1e94yqluY_A">YouTube</a>',
           '<a href="https://www.youtube.com/watch?v=abc123">Video</a>',
+          '<a href="https://www.facebook.com/sharer.php?u=https%3A%2F%2Fexample.com">Share</a>',
           '<a href="https://www.instagram.com/examplebrand/">Instagram</a>',
           '<a href="https://www.linkedin.com/company/example-brand/">LinkedIn</a>'
         ].join("")
@@ -497,6 +545,7 @@ describe("discover", () => {
     );
     expect(draft.identity.profiles).not.toContain("https://www.youtube.com/watch");
     expect(draft.identity.profiles).not.toContain("https://www.youtube.com/watch?v=abc123");
+    expect(draft.identity.profiles).not.toContain("https://www.facebook.com/sharer.php");
   });
 
   it("detects Shopify catalog pointers without crawling the catalog", async () => {
@@ -640,6 +689,24 @@ describe("discover", () => {
     expect(result.status).toBe(0);
   });
 
+  it("skips duplicate final URLs before generating page ids", async () => {
+    const { url } = await startSite({
+      "/": html("Home", '<h1>Home</h1><a href="/growers">Growers</a><a href="/growers/">Growers</a>'),
+      "/growers": { status: 301, headers: { location: "/growers/" } },
+      "/growers/": html("Growers", "<h1>Growers</h1><p>Flower growers.</p>")
+    });
+    const root = await makeTempRoot();
+    const out = path.join(root, "draft.json");
+    await runCliAsync(["discover", "--url", url, "--out", out, "--max-pages", "3", "--force", "--delay-ms", "0"]);
+    const draft = await readJson(out);
+    const sectionIds = draft.sections.map((section) => section.id);
+    const sourcePageIds = draft.sourcePages.map((page) => page.id);
+
+    expect(new Set(sectionIds).size).toBe(sectionIds.length);
+    expect(new Set(sourcePageIds).size).toBe(sourcePageIds.length);
+    expect(runCli(["generate", "--config", out, "--out", path.join(root, "public"), "--allow-draft", "--dry-run"]).status).toBe(0);
+  });
+
   it("generate refuses draft_review_required config by default", async () => {
     const { url } = await startSite({ "/": html("Home", "<h1>Home</h1>") });
     const root = await makeTempRoot();
@@ -772,8 +839,12 @@ async function startSite(routes) {
       return;
     }
     const normalized = typeof route === "string" ? { contentType: "text/html", body: route } : route;
-    response.writeHead(200, { "content-type": normalized.contentType });
-    response.end(normalized.body.replaceAll("__BASE__", baseUrl.replace(/\/$/, "")));
+    const status = normalized.status || 200;
+    response.writeHead(status, {
+      "content-type": normalized.contentType || "text/html",
+      ...(normalized.headers || {})
+    });
+    response.end((normalized.body || "").replaceAll("__BASE__", baseUrl.replace(/\/$/, "")));
   });
   await new Promise((resolve) => {
     server.listen(0, "127.0.0.1", resolve);

@@ -32,6 +32,16 @@
       "minLength": 1,
       "maxLength": 35
     },
+    "verticalPreset": {
+      "type": "string",
+      "enum": [
+        "ecommerce",
+        "nonprofit",
+        "saas",
+        "local-business",
+        "docs"
+      ]
+    },
     "publisher": {
       "type": "object",
       "required": [
@@ -493,6 +503,16 @@
         },
         "source": {
           "type": "string"
+        },
+        "preset": {
+          "type": "string",
+          "enum": [
+            "ecommerce",
+            "nonprofit",
+            "saas",
+            "local-business",
+            "docs"
+          ]
         },
         "generatedAt": {
           "type": "string",

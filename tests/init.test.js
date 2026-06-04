@@ -100,6 +100,31 @@ describe("init", () => {
     await expect(fs.stat(path.join(root, "sitectx.config.json"))).resolves.toBeTruthy();
   });
 
+  it("init --preset writes vertical preset metadata", async () => {
+    const root = await makeTempRoot();
+    const result = runCli([
+      "init",
+      "--root",
+      root,
+      "--site-url",
+      "https://example.com",
+      "--name",
+      "Example Shop",
+      "--preset",
+      "ecommerce"
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Preset: Ecommerce");
+    const config = await readJson(path.join(root, "sitectx.config.json"));
+    const manifest = await readJson(path.join(root, ".well-known", "sitectx"));
+    const context = await readJson(path.join(root, "sitectx.json"));
+    expect(config.verticalPreset).toBe("ecommerce");
+    expect(config.positioning.vertical).toMatchObject({ id: "ecommerce", label: "Ecommerce" });
+    expect(manifest.site.vertical).toMatchObject({ id: "ecommerce", label: "Ecommerce" });
+    expect(context.site.vertical).toMatchObject({ id: "ecommerce", label: "Ecommerce" });
+  });
+
   it("init detects a web app public directory and keeps config in the app root", async () => {
     const root = await makeTempRoot();
     await fs.writeFile(path.join(root, "package.json"), '{"scripts":{"dev":"next dev"}}\n', "utf8");
@@ -208,6 +233,32 @@ describe("init", () => {
     expect(manifest.records.map((record) => record.id)).toEqual(["page:home", "page:about"]);
     expect(manifest.actions).toEqual(expect.arrayContaining(discovered.config.actions));
     expect(context.actions).toEqual(expect.arrayContaining(discovered.config.actions));
+  });
+
+  it("init discovery uses nonprofit preset to prioritize donation intent", async () => {
+    const { url } = await startSite({
+      "/": html(
+        "Community Fund",
+        "Community Fund supports local programs.",
+        [
+          "<h1>Community Fund</h1>",
+          '<a href="/products">Products</a>',
+          '<a href="/donate">Donate</a>',
+          '<a href="/contact">Contact</a>'
+        ].join("")
+      ),
+      "/products": html("Products", "Program merchandise.", "<h1>Products</h1>"),
+      "/donate": html("Donate", "Support Community Fund.", "<h1>Donate</h1>"),
+      "/contact": html("Contact", "Contact Community Fund.", "<h1>Contact</h1>")
+    });
+
+    const discovered = await discoverForInit(url, { preset: "nonprofit", maxPages: 2, maxDepth: 1, delayMs: 0 });
+
+    expect(discovered.ok).toBe(true);
+    expect(discovered.config.verticalPreset).toBe("nonprofit");
+    expect(discovered.config.sections.map((section) => section.id)).toEqual(["home", "donate"]);
+    expect(discovered.config.actions[0]).toMatchObject({ type: "donate" });
+    expect(discovered.config.catalogs).toEqual([]);
   });
 
   it("init refuses overwrite without --force", async () => {

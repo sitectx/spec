@@ -24,6 +24,7 @@ export async function inferSiteContext(options = {}) {
       name,
       description,
       summary: description,
+      preset: options.preset,
       source: "site"
     };
   } catch (error) {
@@ -34,6 +35,7 @@ export async function inferSiteContext(options = {}) {
       name: cleanSiteName(fallbackName),
       description,
       summary: description,
+      preset: options.preset,
       source: "fallback",
       warning: error instanceof Error ? error.message : "Could not infer site context."
     };

@@ -31,9 +31,10 @@ Zero-install quick start:
 
 Existing app/static public dir:
   npx sitectx@latest init --root . --public-dir ./public
+  npx sitectx@latest init --preset ecommerce
 
 Localhost discovery:
-  npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
+  npx sitectx@latest discover http://localhost:3000 --preset saas --max-pages 25 --max-depth 2
   npx sitectx@latest review sitectx.config.draft.json
   npx sitectx@latest generate sitectx.config.draft.json ./public --force
 

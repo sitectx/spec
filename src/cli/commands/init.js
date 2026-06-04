@@ -1,11 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { printCheckResult, writeError, writeJson, writeLine } from "../output.js";
 import { GENERATED_ARTIFACTS, buildInitFiles, toWritePlan } from "../../core/artifacts.js";
 import { readExistingConfig, summarizeConfigChanges } from "../../core/change-detection.js";
 import { discoverSite } from "../../core/discover.js";
 import { artifactPaths, fileExists, removeFileIfExists, writeUtf8 } from "../../core/filesystem.js";
+import { VERTICAL_PRESET_NAMES, applyPresetMetadata, normalizePreset, presetMetadata } from "../../core/presets.js";
 import { inferSiteContext } from "../../core/site-inference.js";
 import { validateLocalArtifacts } from "../../core/validation.js";
 
@@ -25,6 +27,7 @@ export function registerInitCommand(program) {
     .option("--site-url <url>", "Public site URL.")
     .option("--name <name>", "Site name.")
     .option("--description <text>", "Short description of what the site is about.")
+    .addOption(new Option("--preset <type>", "Vertical preset for discovery priorities.").choices(VERTICAL_PRESET_NAMES))
     .option("--timeout <ms>", "Site metadata fetch timeout in milliseconds.", "7000")
     .option("--max-pages <number>", "Maximum pages to inspect during interactive init.", "8")
     .option("--max-depth <number>", "Maximum link depth during interactive init.", "1")
@@ -35,10 +38,12 @@ export function registerInitCommand(program) {
 
 Examples:
   npx sitectx@latest init
+  npx sitectx@latest init --preset ecommerce
   npx sitectx@latest init --root . --public-dir ./public
   npx sitectx@latest init --site-url http://localhost:3000 --name "Local Site"
 
 Behavior:
+  Presets: auto, ecommerce, nonprofit, saas, local-business, docs.
   Detects ./public in web apps and writes served artifacts there.
   Keeps sitectx.config.json in the project root.
   Existing SiteCTX files require confirmation in the wizard or --force in non-interactive runs.
@@ -167,6 +172,7 @@ async function runInitWizard(options = {}) {
 }
 
 export async function discoverForInit(siteUrl, options = {}) {
+  const preset = normalizePreset(options.preset);
   try {
     const discovery = await discoverSite({
       url: siteUrl,
@@ -174,6 +180,7 @@ export async function discoverForInit(siteUrl, options = {}) {
       maxDepth: options.maxDepth || 1,
       timeout: options.timeout || 7000,
       delayMs: 50,
+      preset,
       onProgress: options.onProgress
     });
     return {
@@ -189,6 +196,7 @@ export async function discoverForInit(siteUrl, options = {}) {
       siteUrl,
       name: options.name,
       description: options.description,
+      preset,
       timeout: options.timeout
     });
     return {
@@ -219,7 +227,7 @@ function starterConfigFromDiscovery(config) {
 }
 
 function fallbackConfigFromInference(inferred) {
-  return {
+  return applyPresetMetadata({
     siteUrl: inferred.siteUrl,
     name: inferred.name,
     description: inferred.description,
@@ -273,7 +281,7 @@ function fallbackConfigFromInference(inferred) {
         summary: "Initial machine-readable site context was generated from public website metadata."
       }
     ]
-  };
+  }, inferred.preset || "auto");
 }
 
 export async function runInit(options) {
@@ -287,6 +295,7 @@ export async function runInit(options) {
       siteUrl: options.siteUrl,
       name: options.name,
       description: options.description,
+      preset: options.preset,
       sampleContent: options.sampleContent
     });
     config = initFiles.config;
@@ -303,6 +312,7 @@ export async function runInit(options) {
   result.root = layout.root;
   result.publicDir = layout.publicDir;
   result.detectedPublicDir = layout.detectedPublicDir;
+  result.preset = config.verticalPreset || "auto";
   result.warnings = [];
   result.changes = summarizeConfigChanges(await readExistingConfig(layout.root), config);
   if (isLocalhostSiteUrl(config.siteUrl)) {
@@ -381,6 +391,9 @@ function printInitResult(result, options) {
   }
   if (result.detectedPublicDir && !options.json) {
     writeLine(webAppPublicDirMessage(result));
+  }
+  if (result.preset && result.preset !== "auto") {
+    writeLine(`Preset: ${presetMetadata(result.preset).label}`);
   }
   printInitChangeSummary(result.changes);
   if (result.errors.length > 0) {

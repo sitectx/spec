@@ -22,6 +22,26 @@ npx sitectx@latest inspect .
 In an interactive terminal, `init` asks for the site URL and output location,
 discovers the site, shows what it found, writes the files, and validates them.
 
+## Vertical Presets
+
+Use a preset when you already know the kind of site. Presets tune discovery so
+SiteCTX spends its limited crawl budget on the pages, actions, and catalog
+signals that matter for that vertical.
+
+```bash
+npx sitectx@latest init --preset ecommerce
+npx sitectx@latest init --preset nonprofit
+npx sitectx@latest init --preset saas
+npx sitectx@latest init --preset local-business
+npx sitectx@latest init --preset docs
+```
+
+The same presets work in the advanced draft workflow:
+
+```bash
+npx sitectx@latest discover https://example.com --preset ecommerce
+```
+
 ## Existing App
 
 For a Next.js, Vite, Astro, or static app with a `public/` directory:
@@ -227,6 +247,7 @@ test generation.
 
 ```bash
 npx sitectx@latest init
+npx sitectx@latest init --preset ecommerce
 npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
 npx sitectx@latest review sitectx.config.draft.json
 npx sitectx@latest generate sitectx.config.draft.json ./public --force

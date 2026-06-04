@@ -1,4 +1,5 @@
 import { normalizeSiteUrl } from "../core/urls.js";
+import { applyPresetMetadata } from "../core/presets.js";
 
 export function createDefaultConfig(options = {}) {
   const siteUrl = normalizeSiteUrl(options.siteUrl || "https://example.com");
@@ -7,7 +8,7 @@ export function createDefaultConfig(options = {}) {
   const rootUrl = `${siteUrl}/`;
   const sampleContent = options.sampleContent !== false;
 
-  return {
+  return applyPresetMetadata({
     siteUrl,
     name,
     description,
@@ -77,5 +78,5 @@ export function createDefaultConfig(options = {}) {
         summary: "Initial machine-readable site context was published."
       }
     ]
-  };
+  }, options.preset);
 }

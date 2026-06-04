@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { stableJson } from "./artifacts.js";
 import { ensureParentDirectory, fileExists, writeUtf8 } from "./filesystem.js";
+import { applyPresetMetadata, normalizePreset, presetActionBoost, presetCatalogRoles, presetRoleBoost } from "./presets.js";
 import { scanForSecrets, redactSecretsInString } from "./secrets.js";
 import { isLocalhostUrl } from "./urls.js";
 
@@ -52,6 +53,7 @@ export async function discoverSite(options = {}) {
   const timeout = positiveInt(options.timeout, 10000);
   const delayMs = Math.max(0, positiveInt(options.delayMs, 100));
   const maxBytes = positiveInt(options.maxBytes, 1_500_000);
+  const preset = normalizePreset(options.preset);
   const base = normalizeBaseUrl(options.url);
   enforceDiscoveryScheme(base.normalizedBaseUrl);
   emitProgress(options, {
@@ -87,7 +89,7 @@ export async function discoverSite(options = {}) {
     message: "Looking for sitemaps",
     url: base.origin
   });
-  const sitemapUrls = await fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robots });
+  const sitemapUrls = await fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robots, preset });
   emitProgress(options, {
     stage: "queue",
     message: sitemapUrls.length > 0
@@ -157,6 +159,10 @@ export async function discoverSite(options = {}) {
       skipped.push({ url: candidate.url, reason: "non-html" });
       continue;
     }
+    if (includedUrls.has(normalizedFinalUrl)) {
+      skipped.push({ url: candidate.url, reason: "duplicate-final-url" });
+      continue;
+    }
 
     const contentHash = `sha256:${sha256(fetched.body)}`;
     if (seenHashes.has(contentHash)) {
@@ -166,7 +172,7 @@ export async function discoverSite(options = {}) {
     seenHashes.add(contentHash);
     includedUrls.add(normalizedFinalUrl);
 
-    const extract = extractHtml(fetched.body, normalizedFinalUrl, base.normalizedBaseUrl);
+    const extract = extractHtml(fetched.body, normalizedFinalUrl, base.normalizedBaseUrl, preset);
     extract.warnings.push(...extractSecretWarnings(extract));
     emitProgress(options, {
       stage: "extract",
@@ -249,6 +255,7 @@ export async function discoverSite(options = {}) {
     normalizedBaseUrl: base.normalizedBaseUrl,
     maxPages,
     maxDepth,
+    preset,
     pagesFetched: pages.length,
     pagesIncluded: extracts.length,
     pagesSkipped: skipped.length,
@@ -261,6 +268,7 @@ export async function discoverSite(options = {}) {
     extracts: extracts.map((entry) => entry.record),
     pages: pages.map((entry) => entry.record),
     warnings: allWarnings,
+    preset,
     corpusPath: preserveWorkdir ? options.workdir || workdir : null
   });
 
@@ -321,7 +329,7 @@ export async function discoverSite(options = {}) {
       url: normalized,
       depth,
       source,
-      priority: crawlPriority(normalized, source, depth),
+      priority: crawlPriority(normalized, source, depth, preset),
       order: queueOrder
     };
     const existingIndex = queued.findIndex((entry) => entry.url === normalized);
@@ -441,7 +449,7 @@ function compareCrawlCandidates(a, b) {
   return a.order - b.order;
 }
 
-function crawlPriority(url, source, depth) {
+function crawlPriority(url, source, depth, preset = "auto") {
   const parsed = new URL(url);
   const pathText = parsed.pathname.toLowerCase();
   const role = pageRoleForUrl(url, {});
@@ -464,7 +472,7 @@ function crawlPriority(url, source, depth) {
     legal: 60,
     page: 0
   }[role] ?? 0;
-  let score = sourceScore + roleScore + depth * 15;
+  let score = sourceScore + roleScore + presetRoleBoost(preset, role) + depth * 15;
   if (/\b(featured_item|our-brands|preserved|greenery|peonies|plants|roses?|flowers?|growers)\b/.test(pathText)) {
     score -= 50;
   }
@@ -480,8 +488,8 @@ function crawlPriority(url, source, depth) {
   return score;
 }
 
-function navigationPriority(item, base) {
-  let score = crawlPriority(item.url, "navigation", 1);
+function navigationPriority(item, base, preset = "auto") {
+  let score = crawlPriority(item.url, "navigation", 1, preset);
   const label = normalizeWhitespace(item.label || "").toLowerCase();
   if (/\b(shop|buy|order|products?|brands?|catalog|flowers?|roses?|peonies|greenery|plants)\b/.test(label)) {
     score -= 35;
@@ -494,7 +502,7 @@ function navigationPriority(item, base) {
   if (base?.origin && !sameOrigin(item.url, base.origin)) {
     score -= /\b(shop|buy|order|store|sales|merch)\b/.test(label) ? 10 : -20;
   }
-  return score;
+  return score + presetRoleBoost(preset, item.role || pageRoleForUrl(item.url, {}));
 }
 
 function enforceDiscoveryScheme(url) {
@@ -534,7 +542,7 @@ async function fetchRobots(base, { timeout, maxBytes }) {
   };
 }
 
-async function fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robots }) {
+async function fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robots, preset }) {
   const seedUrls = uniqueStrings([
     ...(robots?.sitemapUrls || []),
     new URL("/sitemap.xml", base.origin).toString(),
@@ -572,7 +580,7 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robot
     }
     const locs = parseSitemapLocs(result.body);
     if (isSitemapIndex(result.body)) {
-      const childSitemaps = rankSitemapUrls(locs, base)
+      const childSitemaps = rankSitemapUrls(locs, base, preset)
         .filter((url) => !/\/(attachment|author|category|post_tag|blocks|wpdmpro)-sitemap/i.test(safePathname(url)))
         .slice(0, MAX_CHILD_SITEMAPS);
       for (const childSitemap of childSitemaps) {
@@ -598,7 +606,7 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robot
   for (const sitemapUrl of seedUrls) {
     await readSitemap(sitemapUrl, 0);
   }
-  return rankSitemapUrls([...new Set(pageUrls)], base);
+  return rankSitemapUrls([...new Set(pageUrls)], base, preset);
 }
 
 async function fetchPage(url, { timeout, maxBytes, acceptAnyText = false }) {
@@ -671,11 +679,11 @@ async function readLimitedResponse(response, maxBytes) {
   return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString("utf8");
 }
 
-function extractHtml(html, pageUrl, baseUrl) {
+function extractHtml(html, pageUrl, baseUrl, preset = "auto") {
   const canonicalHref = firstTagAttr(html, "link", "href", (attrs) => /\bcanonical\b/i.test(attrs.rel || ""));
   const jsonLd = jsonLdNodes(html);
   const linkedUrls = extractLinks(html, pageUrl, baseUrl);
-  const navigation = extractNavigation(html, pageUrl, baseUrl);
+  const navigation = extractNavigation(html, pageUrl, baseUrl, preset);
   const linkWarnings = offOriginLinkWarnings();
   const rawExcerpt = visibleText(html);
   const redactedExcerpt = truncate(redactSecretsInString(rawExcerpt), MAX_EXCERPT_LENGTH);
@@ -694,10 +702,11 @@ function extractHtml(html, pageUrl, baseUrl) {
   const role = pageRoleForUrl(pageUrl, { title, h1 });
   const actions = rankActions(
     [
-      ...actionCandidates(html, pageUrl, baseUrl),
-      ...jsonLdActionCandidates(jsonLd, pageUrl, baseUrl)
+      ...actionCandidates(html, pageUrl, baseUrl, preset),
+      ...jsonLdActionCandidates(jsonLd, pageUrl, baseUrl, preset)
     ],
-    baseUrl
+    baseUrl,
+    preset
   );
   return {
     canonicalUrl: normalizeCrawlUrl(canonicalHref || pageUrl, pageUrl) || pageUrl,
@@ -711,7 +720,7 @@ function extractHtml(html, pageUrl, baseUrl) {
     identity: identityCandidate(html, pageUrl, baseUrl, jsonLd),
     products: productCandidatesFromJsonLd(jsonLd, pageUrl),
     faqFromJsonLd: faqCandidatesFromJsonLd(jsonLd, pageUrl),
-    catalogHints: catalogHintsFromPage(html, pageUrl, baseUrl, jsonLd),
+    catalogHints: catalogHintsFromPage(html, pageUrl, baseUrl, jsonLd, preset),
     excerpt: redactedExcerpt,
     possibleFaq,
     possibleClaims,
@@ -724,10 +733,12 @@ function extractHtml(html, pageUrl, baseUrl) {
   };
 }
 
-function buildDraftConfig({ base, generatedAt, extracts, pages, warnings, corpusPath }) {
-  const primary = extracts[0] || {};
+function buildDraftConfig({ base, generatedAt, extracts, pages, warnings, preset, corpusPath }) {
+  const uniqueExtracts = dedupeExtractsByUrl(extracts);
+  const pageEntries = pageEntriesForExtracts(uniqueExtracts, base.origin);
+  const primary = uniqueExtracts[0] || {};
   const identity = mergeIdentity(
-    extracts.map((extract) => extract.identity),
+    uniqueExtracts.map((extract) => extract.identity),
     base
   );
   const name = identity.name || primary.title || primary.h1 || new URL(base.normalizedBaseUrl).hostname;
@@ -737,18 +748,18 @@ function buildDraftConfig({ base, generatedAt, extracts, pages, warnings, corpus
   identity.url ||= base.siteUrl;
   identity.sourceUrl ||= primary.url || base.normalizedBaseUrl;
   const language = primary.language || "en";
-  const sections = extracts.map((extract) => ({
-    id: sectionIdForUrl(extract.url, base.origin),
+  const sections = pageEntries.map(({ extract, id }) => ({
+    id,
     title: sectionTitleForExtract(extract),
     url: extract.url,
     role: extract.role || pageRoleForUrl(extract.url, extract),
     summary: pageSummaryForExtract(extract, base.normalizedBaseUrl)
   }));
-  const navigation = buildNavigation(extracts, base).slice(0, 60);
-  const sourcePages = extracts.map((extract) => {
+  const navigation = buildNavigation(uniqueExtracts, base, preset).slice(0, 60);
+  const sourcePages = pageEntries.map(({ extract, id }) => {
     const page = pages.find((entry) => entry.finalUrl === extract.url);
     return {
-      id: sectionIdForUrl(extract.url, base.origin),
+      id,
       url: extract.url,
       title: sectionTitleForExtract(extract),
       role: extract.role || pageRoleForUrl(extract.url, extract),
@@ -758,28 +769,29 @@ function buildDraftConfig({ base, generatedAt, extracts, pages, warnings, corpus
       contentHash: page?.contentHash || null
     };
   });
-  const candidatePages = extracts.map((extract) => ({
+  const candidatePages = uniqueExtracts.map((extract) => ({
     url: extract.url,
     title: sectionTitleForExtract(extract),
     role: extract.role || pageRoleForUrl(extract.url, extract),
     excerpt: extract.excerpt,
     reviewRequired: true
   }));
-  const actions = rankActions(extracts.flatMap((extract) => extract.actions || []), base.normalizedBaseUrl).slice(0, 20);
+  const actions = rankActions(uniqueExtracts.flatMap((extract) => extract.actions || []), base.normalizedBaseUrl, preset).slice(0, 20);
   const products = dedupeItemsById([
-    ...extracts.flatMap((extract) => extract.products || []),
+    ...uniqueExtracts.flatMap((extract) => extract.products || []),
     ...productLineCandidatesFromNavigationAndSections({ navigation, sections })
   ]).slice(0, 20);
   const faq = dedupeItemsById([
-    ...extracts.flatMap((extract) => extract.faqFromJsonLd || [])
+    ...uniqueExtracts.flatMap((extract) => extract.faqFromJsonLd || [])
   ]).slice(0, 20);
   const catalogs = buildCatalogs({
     base,
-    extracts,
+    extracts: uniqueExtracts,
     products,
+    preset,
     generatedAt
   });
-  return {
+  return applyPresetMetadata({
     siteUrl: base.siteUrl,
     name,
     description,
@@ -811,13 +823,13 @@ function buildDraftConfig({ base, generatedAt, extracts, pages, warnings, corpus
     sourcePages,
     discoveryCandidates: {
       facts: [],
-      claims: extracts.flatMap((extract) =>
+      claims: uniqueExtracts.flatMap((extract) =>
         extract.possibleClaims.map((candidate) => ({
           ...candidate,
           sourceUrl: extract.url
         }))
       ),
-      faq: extracts.flatMap((extract) =>
+      faq: uniqueExtracts.flatMap((extract) =>
         extract.possibleFaq.map((candidate) => ({
           ...candidate,
           sourceUrl: extract.url
@@ -828,6 +840,7 @@ function buildDraftConfig({ base, generatedAt, extracts, pages, warnings, corpus
     discovery: {
       status: "draft_review_required",
       source: "sitectx discover",
+      ...(preset && preset !== "auto" ? { preset } : {}),
       generatedAt,
       baseUrl: base.siteUrl,
       pagesFetched: pages.length,
@@ -848,7 +861,35 @@ function buildDraftConfig({ base, generatedAt, extracts, pages, warnings, corpus
         summary: "Initial SiteCTX draft was generated from discovered site content."
       }
     ]
-  };
+  }, preset);
+}
+
+function dedupeExtractsByUrl(extracts) {
+  const byUrl = new Map();
+  for (const extract of extracts) {
+    if (!byUrl.has(extract.url)) {
+      byUrl.set(extract.url, extract);
+    }
+  }
+  return [...byUrl.values()];
+}
+
+function pageEntriesForExtracts(extracts, origin) {
+  const used = new Set();
+  return extracts.map((extract) => {
+    const baseId = sectionIdForUrl(extract.url, origin);
+    let id = baseId;
+    if (used.has(id)) {
+      id = `${baseId}-${sha256(extract.url).slice(0, 8)}`;
+      let suffix = 2;
+      while (used.has(id)) {
+        id = `${baseId}-${sha256(`${extract.url}:${suffix}`).slice(0, 8)}`;
+        suffix += 1;
+      }
+    }
+    used.add(id);
+    return { extract, id };
+  });
 }
 
 function pageSummaryForExtract(extract, baseUrl) {
@@ -911,7 +952,7 @@ function isSitemapUrlSet(xml) {
   return /<urlset\b/i.test(xml);
 }
 
-function rankSitemapUrls(urls, base) {
+function rankSitemapUrls(urls, base, preset = "auto") {
   return uniqueStrings(urls)
     .map((url, index) => {
       const normalized = normalizeCrawlUrl(url, base.normalizedBaseUrl);
@@ -919,7 +960,7 @@ function rankSitemapUrls(urls, base) {
         ? {
             url: normalized,
             index,
-            priority: crawlPriority(normalized, "sitemap", 1)
+            priority: crawlPriority(normalized, "sitemap", 1, preset)
           }
         : null;
     })
@@ -948,7 +989,7 @@ function extractLinks(html, pageUrl, baseUrl) {
   return uniqueStrings(links);
 }
 
-function extractNavigation(html, pageUrl, baseUrl) {
+function extractNavigation(html, pageUrl, baseUrl, preset = "auto") {
   const blocks = navigationBlocks(html);
   const sourceBlocks = blocks.length > 0 ? blocks : [html.slice(0, 120_000)];
   const items = [];
@@ -975,7 +1016,7 @@ function extractNavigation(html, pageUrl, baseUrl) {
         role,
         external: !sameOrigin(url, new URL(baseUrl).origin),
         sourceUrl: pageUrl,
-        priority: navigationPriority({ label, url, role }, { origin: new URL(baseUrl).origin })
+        priority: navigationPriority({ label, url, role }, { origin: new URL(baseUrl).origin }, preset)
       });
     }
   }
@@ -1194,7 +1235,7 @@ function faqCandidatesFromJsonLd(nodes, pageUrl) {
   return dedupeItemsById(faq);
 }
 
-function jsonLdActionCandidates(nodes, pageUrl, baseUrl) {
+function jsonLdActionCandidates(nodes, pageUrl, baseUrl, preset = "auto") {
   const actions = [];
   for (const node of nodes) {
     for (const action of arrayify(node.potentialAction)) {
@@ -1213,16 +1254,16 @@ function jsonLdActionCandidates(nodes, pageUrl, baseUrl) {
         type,
         url,
         label,
-        priority: actionPriority(type, url, pageUrl, baseUrl),
+        priority: actionPriority(type, url, pageUrl, baseUrl, preset),
         sourceUrl: pageUrl,
         sourceText: `JSON-LD ${schemaTail(stringField(action["@type"])) || defaultActionLabel(type)}`
       });
     }
   }
-  return rankActions(actions, baseUrl);
+  return rankActions(actions, baseUrl, preset);
 }
 
-function catalogHintsFromPage(html, pageUrl, baseUrl, jsonLd) {
+function catalogHintsFromPage(html, pageUrl, baseUrl, jsonLd, preset = "auto") {
   const hints = [];
   const lowerHtml = html.toLowerCase();
   const origin = new URL(baseUrl).origin;
@@ -1307,7 +1348,7 @@ function catalogHintsFromPage(html, pageUrl, baseUrl, jsonLd) {
   }
 
   const role = pageRoleForUrl(pageUrl, {});
-  if (["products", "pricing", "book"].includes(role)) {
+  if (presetCatalogRoles(preset).includes(role)) {
     hints.push({
       id: `catalog:${role}-pages`,
       type: role === "pricing" ? "offers" : "products",
@@ -1411,7 +1452,7 @@ function commerceSourceForUrl(url, label, baseOrigin) {
   return null;
 }
 
-function buildCatalogs({ base, extracts, products, generatedAt }) {
+function buildCatalogs({ base, extracts, products, preset = "auto", generatedAt }) {
   const hints = extracts.flatMap((extract) => extract.catalogHints || []);
   const catalogMap = new Map();
   for (const hint of hints) {
@@ -1425,7 +1466,7 @@ function buildCatalogs({ base, extracts, products, generatedAt }) {
     });
   }
 
-  if (products.length > 0 && !catalogMap.has("catalog:jsonld-products")) {
+  if (presetCatalogRoles(preset).length > 0 && products.length > 0 && !catalogMap.has("catalog:jsonld-products")) {
     const product = products[0];
     catalogMap.set("catalog:jsonld-products", {
       id: "catalog:jsonld-products",
@@ -1456,7 +1497,7 @@ function buildCatalogs({ base, extracts, products, generatedAt }) {
     .slice(0, 20);
 }
 
-function buildNavigation(extracts, base) {
+function buildNavigation(extracts, base, preset = "auto") {
   const byKey = new Map();
   for (const item of extracts.flatMap((extract) => extract.navigation || [])) {
     const role = item.role || pageRoleForUrl(item.url, {});
@@ -1467,7 +1508,7 @@ function buildNavigation(extracts, base) {
       role,
       external: !sameOrigin(item.url, base.origin),
       sourceUrl: item.sourceUrl,
-      priority: item.priority ?? navigationPriority({ ...item, role }, base)
+      priority: item.priority ?? navigationPriority({ ...item, role }, base, preset)
     });
     const key = `${normalized.label.toLowerCase()}:${normalized.url}`;
     const existing = byKey.get(key);
@@ -1530,7 +1571,7 @@ function productLineCandidate({ title, url, sourceUrl, source }) {
   });
 }
 
-function actionCandidates(html, pageUrl, baseUrl) {
+function actionCandidates(html, pageUrl, baseUrl, preset = "auto") {
   const actions = [];
   for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
     const attrs = parseAttrs(match[1]);
@@ -1556,7 +1597,7 @@ function actionCandidates(html, pageUrl, baseUrl) {
       type,
       url,
       label: label || defaultActionLabel(type),
-      priority: actionPriority(type, url, pageUrl, baseUrl),
+      priority: actionPriority(type, url, pageUrl, baseUrl, preset),
       sourceUrl: pageUrl,
       sourceText: label || defaultActionLabel(type)
     });
@@ -1580,12 +1621,12 @@ function actionCandidates(html, pageUrl, baseUrl) {
       type,
       url,
       label: label || defaultActionLabel(type),
-      priority: actionPriority(type, url, pageUrl, baseUrl),
+      priority: actionPriority(type, url, pageUrl, baseUrl, preset),
       sourceUrl: pageUrl,
       sourceText: label || defaultActionLabel(type)
     });
   }
-  return rankActions(actions, baseUrl);
+  return rankActions(actions, baseUrl, preset);
 }
 
 function actionTypeForLink({ url, label }) {
@@ -1629,7 +1670,7 @@ function formActionText(html) {
   return inputValue || "";
 }
 
-function actionPriority(type, url, sourceUrl, baseUrl) {
+function actionPriority(type, url, sourceUrl, baseUrl, preset = "auto") {
   const typeScore = {
     donate: 10,
     buy: 15,
@@ -1644,7 +1685,7 @@ function actionPriority(type, url, sourceUrl, baseUrl) {
     login: 70,
     learn: 90
   }[type] ?? 80;
-  let score = typeScore;
+  let score = typeScore + presetActionBoost(preset, type);
   const sourcePath = safePathname(sourceUrl);
   if (sourcePath && sourcePath !== "/") {
     score += 5;
@@ -1686,13 +1727,13 @@ function dedupeActions(actions) {
   return [...byKey.values()];
 }
 
-function rankActions(actions, baseUrl) {
+function rankActions(actions, baseUrl, preset = "auto") {
   const ranked = dedupeActions(actions)
     .map((action) => ({
       ...action,
       priority: Number.isInteger(action.priority)
         ? action.priority
-        : actionPriority(action.type, action.url, action.sourceUrl, baseUrl)
+        : actionPriority(action.type, action.url, action.sourceUrl, baseUrl, preset)
     }))
     .sort((a, b) => {
       if (a.priority !== b.priority) {
@@ -1867,7 +1908,9 @@ function isSocialProfileUrl(url) {
     return segments.length >= 2 && ["company", "school", "in"].includes(segments[0].toLowerCase());
   }
   if (host === "facebook.com" || host.endsWith(".facebook.com")) {
-    return segments.length === 1 && !["share", "sharer", "watch", "events", "groups", "reel", "photo"].includes(segments[0].toLowerCase());
+    const segment = segments[0]?.toLowerCase() || "";
+    const route = segment.replace(/\.[a-z0-9]+$/i, "");
+    return segments.length === 1 && !["share", "sharer", "watch", "events", "groups", "reel", "photo"].includes(route);
   }
   if (["instagram.com", "threads.net", "tiktok.com", "x.com", "twitter.com", "github.com", "medium.com", "bsky.app"].some((socialHost) =>
     host === socialHost || host.endsWith(`.${socialHost}`)

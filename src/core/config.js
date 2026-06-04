@@ -2,6 +2,7 @@ import { readUtf8 } from "./filesystem.js";
 import { getValidators, formatSchemaErrors } from "./schemas.js";
 import { normalizeSiteUrl } from "./urls.js";
 import { scanForSecrets } from "./secrets.js";
+import { VERTICAL_PRESET_NAMES } from "./presets.js";
 
 export async function loadConfig(configPath) {
   const raw = await readUtf8(configPath);
@@ -72,6 +73,14 @@ function addConfigSemanticErrors(config, errors) {
 
   if (config.discovery?.status && !["draft_review_required", "reviewed"].includes(config.discovery.status)) {
     errors.push("$.discovery.status must be draft_review_required or reviewed");
+  }
+  for (const [jsonPath, value] of [
+    ["$.verticalPreset", config.verticalPreset],
+    ["$.discovery.preset", config.discovery?.preset]
+  ]) {
+    if (value != null && !VERTICAL_PRESET_NAMES.filter((preset) => preset !== "auto").includes(value)) {
+      errors.push(`${jsonPath} must be ecommerce, nonprofit, saas, local-business, or docs`);
+    }
   }
 
   const urlFields = [

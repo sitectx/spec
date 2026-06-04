@@ -20,6 +20,7 @@ export function createManifest(config, generatedAt) {
       url: config.siteUrl,
       description: config.description,
       language: config.language,
+      ...(config.positioning?.vertical ? { vertical: config.positioning.vertical } : {}),
       ...(identity.logo ? { logo: identity.logo } : {}),
       ...(identity.profiles?.length ? { profiles: identity.profiles } : {})
     },

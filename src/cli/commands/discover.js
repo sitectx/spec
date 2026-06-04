@@ -4,6 +4,7 @@ import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS } from "../exit-codes.js";
 import { writeError, writeJson, writeLine } from "../output.js";
 import { discoverSite, writeDiscoveryOutput } from "../../core/discover.js";
 import { stableJson } from "../../core/artifacts.js";
+import { VERTICAL_PRESET_NAMES } from "../../core/presets.js";
 
 export function registerDiscoverCommand(program) {
   function collect(value, previous) {
@@ -18,6 +19,7 @@ export function registerDiscoverCommand(program) {
     .option("--out <path>", "Draft config output path.", "sitectx.config.draft.json")
     .option("--workdir <path>", "Directory for crawl corpus.")
     .option("--keep-workdir", "Preserve generated crawl corpus after run.")
+    .addOption(new Option("--preset <type>", "Vertical preset for discovery priorities.").choices(VERTICAL_PRESET_NAMES))
     .option("--max-pages <number>", "Maximum pages to include.", "25")
     .option("--max-depth <number>", "Maximum link depth.", "2")
     .option("--timeout <ms>", "Fetch timeout in milliseconds.", "10000")
@@ -34,9 +36,11 @@ export function registerDiscoverCommand(program) {
 
 Examples:
   npx sitectx@latest discover https://example.com
+  npx sitectx@latest discover https://example.com --preset ecommerce
   npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
 
 Behavior:
+  Presets: auto, ecommerce, nonprofit, saas, local-business, docs.
   Writes sitectx.config.draft.json by default.
   Run sitectx review sitectx.config.draft.json before generate.
 `)
