@@ -15,11 +15,15 @@ export async function inspectLocal(options = {}) {
   const updatesPath = manifest?.updates?.url
     ? resolvePublicPath(root, manifest.updates.url) || paths.updates
     : paths.updates;
+  const catalogsPath = manifest?.catalogs?.url
+    ? resolvePublicPath(root, manifest.catalogs.url) || paths.catalogs
+    : paths.catalogs;
   const ndjsonPath = manifest?.updatesNdjson?.url
     ? resolvePublicPath(root, manifest.updatesNdjson.url) || paths.ndjson
     : paths.ndjson;
 
   const context = await tryReadJson(contextPath, warnings, "sitectx.json");
+  const catalogs = await tryReadJson(catalogsPath, warnings, "sitectx/catalogs.json");
   const updates = await tryReadJson(updatesPath, warnings, "updates.json");
   let ndjsonCount = 0;
   if (await fileExists(ndjsonPath)) {
@@ -37,6 +41,7 @@ export async function inspectLocal(options = {}) {
     manifestLocation: ".well-known/sitectx",
     manifest,
     context,
+    catalogs,
     updates,
     ndjsonCount,
     warnings
@@ -62,10 +67,12 @@ export async function inspectRemote(options = {}) {
   }
   const manifest = parseJsonText(manifestResponse.body, warnings, manifestUrl);
   const contextUrl = manifest?.context?.url ? new URL(manifest.context.url, manifestUrl).toString() : null;
+  const catalogsUrl = manifest?.catalogs?.url ? new URL(manifest.catalogs.url, manifestUrl).toString() : null;
   const updatesUrl = manifest?.updates?.url ? new URL(manifest.updates.url, manifestUrl).toString() : null;
   const ndjsonUrl = manifest?.updatesNdjson?.url ? new URL(manifest.updatesNdjson.url, manifestUrl).toString() : null;
 
   const context = contextUrl ? await tryFetchJson(contextUrl, timeout, warnings) : null;
+  const catalogs = catalogsUrl ? await tryFetchJson(catalogsUrl, timeout, warnings) : null;
   const updates = updatesUrl ? await tryFetchJson(updatesUrl, timeout, warnings) : null;
   let ndjsonCount = 0;
   if (ndjsonUrl) {
@@ -86,19 +93,25 @@ export async function inspectRemote(options = {}) {
     manifestLocation: manifestUrl,
     manifest,
     context,
+    catalogs,
     updates,
     ndjsonCount,
     warnings
   });
 }
 
-function summarizeInspection({ target, manifestLocation, manifest, context, updates, ndjsonCount, warnings }) {
+function summarizeInspection({ target, manifestLocation, manifest, context, catalogs, updates, ndjsonCount, warnings }) {
   const sectionCount = Array.isArray(context?.sections)
     ? context.sections.length
     : Array.isArray(context?.records)
       ? context.records.length
       : 0;
   const updateCount = Array.isArray(updates?.updates) ? updates.updates.length : ndjsonCount;
+  const catalogCount = Array.isArray(catalogs?.catalogs)
+    ? catalogs.catalogs.length
+    : Array.isArray(context?.catalogs)
+      ? context.catalogs.length
+      : 0;
   return {
     target,
     siteName: manifest?.site?.name || context?.site?.name || null,
@@ -106,11 +119,13 @@ function summarizeInspection({ target, manifestLocation, manifest, context, upda
     specVersion: manifest?.specVersion || context?.specVersion || context?.sitectx_version || null,
     manifestLocation,
     contextUrl: manifest?.context?.url || context?.resources?.self || null,
+    catalogsUrl: manifest?.catalogs?.url || context?.resources?.catalogs || null,
     updatesUrl: manifest?.updates?.url || context?.resources?.updates_json || null,
     updatesNdjsonUrl: manifest?.updatesNdjson?.url || context?.resources?.updates || null,
     evidenceUrl: manifest?.evidence?.url || context?.resources?.evidence || null,
     generatedAt: manifest?.generatedAt || context?.generatedAt || context?.freshness?.generated_at || null,
     sectionCount,
+    catalogCount,
     updateCount,
     warnings
   };
