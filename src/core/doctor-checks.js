@@ -1,11 +1,11 @@
 import path from "node:path";
 import { parseNdjson } from "./ndjson.js";
-import { fetchText } from "./remote-fetch.js";
+import { createRemoteFetchPolicy, fetchText, validateRemoteFetchUrl } from "./remote-fetch.js";
 import { scanForSecrets } from "./secrets.js";
 import { getValidators } from "./schemas.js";
 import { createCollector, summarizeChecks, validateLocalArtifacts, validateWithSchema } from "./validation.js";
 import { addSponsoredContextChecks } from "./commercial-context.js";
-import { discoveryUrlForSite, isLocalhostUrl, safeUrl } from "./urls.js";
+import { discoveryUrlForSite, safeUrl } from "./urls.js";
 
 const PROHIBITED_CLAIMS = [
   {
@@ -50,9 +50,11 @@ export async function doctorLocal(options = {}) {
 export async function doctorRemote(options = {}) {
   const collector = createCollector();
   const timeout = Number(options.timeout || 10000);
+  const maxBytes = Number(options.maxBytes || 1_000_000);
   const inputUrl = options.url;
   const normalized = safeUrl(inputUrl);
   const { validators } = await getValidators();
+  let fetchPolicy;
 
   if (!normalized) {
     collector.fail("url.parse", inputUrl, "URL is not valid.");
@@ -60,16 +62,32 @@ export async function doctorRemote(options = {}) {
   }
 
   const parsed = new URL(normalized);
+  try {
+    fetchPolicy = createRemoteFetchPolicy(normalized, options);
+  } catch (error) {
+    collector.fail(
+      "url.allowlist",
+      normalized,
+      error instanceof Error ? error.message : "Remote fetch allowlist is invalid."
+    );
+    return summarizeChecks(collector.checks, Boolean(options.strict));
+  }
+  const targetPolicy = await validateRemoteFetchUrl(normalized, fetchPolicy);
+  if (!targetPolicy.ok) {
+    collector.fail("url.remotePolicy", normalized, targetPolicy.error);
+    return summarizeChecks(collector.checks, Boolean(options.strict));
+  }
   if (parsed.protocol === "https:") {
     collector.pass("url.https", normalized, "Target uses HTTPS.");
-  } else if (parsed.protocol === "http:" && isLocalhostUrl(normalized)) {
-    collector.warn("url.https", normalized, "HTTP is allowed for localhost targets.");
   } else {
-    collector.fail("url.https", normalized, "Remote SiteCTX doctor requires HTTPS outside localhost.");
+    collector.warn("url.https", normalized, "Non-HTTPS target was allowed by --allow-remote-origin.");
+  }
+  if (targetPolicy.allowlisted) {
+    collector.warn("url.allowlist", normalized, "Target origin was explicitly allowlisted for remote fetching.");
   }
 
   const manifestUrl = discoveryUrlForSite(normalized);
-  const manifestFetch = await fetchText(manifestUrl, { timeout });
+  const manifestFetch = await fetchText(manifestUrl, { timeout, maxBytes, policy: fetchPolicy });
   if (!manifestFetch.ok) {
     collector.fail(
       "manifest.fetch",
@@ -106,6 +124,8 @@ export async function doctorRemote(options = {}) {
     label: "context",
     required: true,
     timeout,
+    maxBytes,
+    fetchPolicy,
     validator: validators.context
   });
 
@@ -116,6 +136,8 @@ export async function doctorRemote(options = {}) {
     label: "catalogs",
     required: false,
     timeout,
+    maxBytes,
+    fetchPolicy,
     validator: validators.catalogs
   });
 
@@ -126,6 +148,8 @@ export async function doctorRemote(options = {}) {
     label: "updates",
     required: false,
     timeout,
+    maxBytes,
+    fetchPolicy,
     validator: validators.updates
   });
 
@@ -134,6 +158,8 @@ export async function doctorRemote(options = {}) {
     collector,
     url: ndjsonUrl,
     timeout,
+    maxBytes,
+    fetchPolicy,
     validator: validators.update
   });
 
@@ -145,6 +171,8 @@ export async function doctorRemote(options = {}) {
       label: "evidence",
       required: false,
       timeout,
+      maxBytes,
+      fetchPolicy,
       validator: null
     });
   }
@@ -157,6 +185,8 @@ export async function doctorRemote(options = {}) {
       label: "sponsoredContext",
       required: false,
       timeout,
+      maxBytes,
+      fetchPolicy,
       validator: validators.sponsoredContext,
       afterValidate: (value) => addSponsoredContextChecks(collector, sponsoredContextUrl, value)
     });
@@ -165,19 +195,20 @@ export async function doctorRemote(options = {}) {
   return summarizeChecks(collector.checks, Boolean(options.strict));
 }
 
-async function fetchAndValidateJson({ collector, url, label, required, timeout, validator, afterValidate }) {
+async function fetchAndValidateJson({ collector, url, label, required, timeout, maxBytes, fetchPolicy, validator, afterValidate }) {
   if (!url) {
     const method = required ? "fail" : "warn";
     collector[method](`${label}.url`, label, `${label} URL is missing from the manifest.`);
     return;
   }
-  const response = await fetchText(url, { timeout });
+  const response = await fetchText(url, { timeout, maxBytes, policy: fetchPolicy });
   if (!response.ok) {
     const method = required ? "fail" : "warn";
+    const reason = response.error || `HTTP ${response.status || "request failed"}`;
     collector[method](
       `${label}.fetch`,
       url,
-      `${label} artifact is not reachable: HTTP ${response.status || "request failed"}.`
+      `${label} artifact is not reachable: ${reason}.`
     );
     return;
   }
@@ -206,14 +237,14 @@ async function fetchAndValidateJson({ collector, url, label, required, timeout, 
   }
 }
 
-async function fetchAndValidateNdjson({ collector, url, timeout, validator }) {
+async function fetchAndValidateNdjson({ collector, url, timeout, maxBytes, fetchPolicy, validator }) {
   if (!url) {
     collector.warn("ndjson.url", "updates.ndjson", "updates.ndjson URL is missing from the manifest.");
     return;
   }
-  const response = await fetchText(url, { timeout });
+  const response = await fetchText(url, { timeout, maxBytes, policy: fetchPolicy });
   if (!response.ok) {
-    collector.warn("ndjson.fetch", url, "updates.ndjson not found.");
+    collector.warn("ndjson.fetch", url, response.error || "updates.ndjson not found.");
     return;
   }
   collector.pass("ndjson.fetch", url, "updates.ndjson artifact is reachable.");

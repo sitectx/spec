@@ -68,15 +68,42 @@ export function displayPath(root, filePath) {
 }
 
 export function resolvePublicPath(root, publicUrl) {
+  const relativePath = publicUrlToRelativePath(publicUrl);
+  if (relativePath == null) {
+    return null;
+  }
+  const resolvedRoot = path.resolve(root);
+  const resolved = path.resolve(resolvedRoot, relativePath);
+  if (!isWithinRoot(resolvedRoot, resolved)) {
+    return null;
+  }
+  return resolved;
+}
+
+export function publicPathEscapesRoot(root, publicUrl) {
+  const relativePath = publicUrlToRelativePath(publicUrl);
+  if (relativePath == null) {
+    return false;
+  }
+  const resolvedRoot = path.resolve(root);
+  return !isWithinRoot(resolvedRoot, path.resolve(resolvedRoot, relativePath));
+}
+
+function publicUrlToRelativePath(publicUrl) {
   if (typeof publicUrl !== "string" || publicUrl.length === 0) {
     return null;
   }
-  if (/^https?:\/\//i.test(publicUrl)) {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(publicUrl) || publicUrl.startsWith("//")) {
     return null;
   }
   const withoutQuery = publicUrl.split(/[?#]/, 1)[0];
-  const relativePath = withoutQuery.startsWith("/")
-    ? withoutQuery.slice(1)
-    : withoutQuery;
-  return path.join(root, relativePath);
+  const normalized = withoutQuery.replaceAll("\\", "/");
+  return normalized.startsWith("/")
+    ? normalized.slice(1)
+    : normalized;
+}
+
+function isWithinRoot(root, filePath) {
+  const relative = path.relative(root, filePath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }

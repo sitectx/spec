@@ -226,6 +226,38 @@ describe("discover", () => {
     expect(draft.sections.map((section) => section.url)).not.toContain("https://example.net/out");
   });
 
+  it("blocks off-origin redirects before fetching the redirect target", async () => {
+    let redirectedHits = 0;
+    const redirectedServer = http.createServer((request, response) => {
+      void request;
+      redirectedHits += 1;
+      response.writeHead(200, { "content-type": "text/html" });
+      response.end(html("Escaped", "<h1>Escaped</h1>"));
+    });
+    await new Promise((resolve) => {
+      redirectedServer.listen(0, "127.0.0.1", resolve);
+    });
+    servers.push(redirectedServer);
+    const redirectedAddress = redirectedServer.address();
+    const redirectedUrl = `http://127.0.0.1:${redirectedAddress.port}/secret`;
+    const { url } = await startSite({
+      "/": html("Home", '<h1>Home</h1><a href="/redirect">Redirect</a>'),
+      "/redirect": { status: 302, headers: { location: redirectedUrl }, body: "" }
+    });
+
+    const result = await discoverSite({
+      url,
+      maxPages: 2,
+      maxDepth: 1,
+      delayMs: 0
+    });
+
+    expect(result.ok).toBe(true);
+    expect(redirectedHits).toBe(0);
+    expect(result.config.sections.map((section) => section.id)).toEqual(["home"]);
+    expect(result.warnings.join("\n")).toContain("Skipped redirect outside origin");
+  });
+
   it("enforces max-pages", async () => {
     const { url } = await startSite({
       "/": html("Home", '<a href="/a">A</a><a href="/b">B</a>'),

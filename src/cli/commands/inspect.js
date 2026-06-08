@@ -11,12 +11,14 @@ export function registerInspectCommand(program) {
     .addOption(new Option("--root <path>", "Local website root.").hideHelp())
     .addOption(new Option("--url <url>", "Public website URL.").hideHelp())
     .option("--timeout <ms>", "Remote fetch timeout in milliseconds.", "10000")
+    .option("--max-bytes <bytes>", "Maximum bytes to read per remote artifact.", "1000000")
+    .option("--allow-remote-origin <origin>", "Allow an additional remote origin for redirects or linked artifacts. Repeat for localhost/private test origins.", collect, [])
     .option("--json", "Print machine-readable output.")
     .addHelpText("after", `
 
 Examples:
   npx sitectx@latest inspect ./public
-  npx sitectx@latest inspect http://localhost:3000
+  npx sitectx@latest inspect http://localhost:3000 --allow-remote-origin http://localhost:3000
   npx sitectx@latest inspect https://example.com
 `)
     .action(async (target, options) => {
@@ -74,6 +76,10 @@ function resolveInspectTarget(target, options) {
     };
   }
   return { ok: true, root: target };
+}
+
+function collect(value, previous) {
+  return [...previous, value];
 }
 
 export function printInspection(result) {

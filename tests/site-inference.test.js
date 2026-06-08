@@ -1,10 +1,11 @@
 import http from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { inferSiteContext } from "../src/core/site-inference.js";
 
 const servers = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     servers.splice(0).map(
       (server) =>
@@ -47,11 +48,40 @@ describe("site inference", () => {
     expect(inferred.name).toBe("Fallback Site");
     expect(inferred.summary).toContain("publishes website context");
   });
+
+  it("blocks redirects to non-allowlisted private origins before fetching them", async () => {
+    const privateSite = await startSite(`<!doctype html>
+      <html lang="en">
+        <head><title>Private Metadata</title></head>
+        <body><h1>Private Metadata</h1></body>
+      </html>`);
+    const redirectingSite = await startSite("", {
+      status: 302,
+      headers: { location: privateSite.url }
+    });
+
+    const inferred = await inferSiteContext({
+      siteUrl: redirectingSite.url,
+      name: "Fallback Site",
+      timeout: 100
+    });
+
+    expect(inferred.ok).toBe(false);
+    expect(inferred.name).toBe("Fallback Site");
+    expect(inferred.warning).toContain("Remote fetch blocked off-origin URL");
+    expect(privateSite.hits()).toBe(0);
+  });
 });
 
 async function startSite(body, options = {}) {
+  let hits = 0;
   const server = http.createServer((request, response) => {
-    response.writeHead(options.status || 200, { "content-type": "text/html" });
+    void request;
+    hits += 1;
+    response.writeHead(options.status || 200, {
+      "content-type": "text/html",
+      ...(options.headers || {})
+    });
     response.end(body);
   });
   await new Promise((resolve) => {
@@ -59,5 +89,5 @@ async function startSite(body, options = {}) {
   });
   servers.push(server);
   const address = server.address();
-  return { server, url: `http://127.0.0.1:${address.port}/` };
+  return { server, url: `http://127.0.0.1:${address.port}/`, hits: () => hits };
 }

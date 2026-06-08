@@ -11,6 +11,8 @@ export function registerDoctorCommand(program) {
     .addOption(new Option("--root <path>", "Local website root.").hideHelp())
     .addOption(new Option("--url <url>", "Public website URL.").hideHelp())
     .option("--timeout <ms>", "Remote fetch timeout in milliseconds.", "10000")
+    .option("--max-bytes <bytes>", "Maximum bytes to read per remote artifact.", "1000000")
+    .option("--allow-remote-origin <origin>", "Allow an additional remote origin for redirects or linked artifacts. Repeat for localhost/private test origins.", collect, [])
     .option("--strict", "Treat warnings as failures.")
     .option("--json", "Print machine-readable output.")
     .option("--verbose", "Include extra check details.")
@@ -18,7 +20,7 @@ export function registerDoctorCommand(program) {
 
 Examples:
   npx sitectx@latest doctor ./public
-  npx sitectx@latest doctor http://localhost:3000
+  npx sitectx@latest doctor http://localhost:3000 --allow-remote-origin http://localhost:3000
   npx sitectx@latest doctor https://example.com
 `)
     .action(async (target, options) => {
@@ -86,4 +88,8 @@ function resolveDoctorTarget(target, options) {
     };
   }
   return { ok: true, root: target };
+}
+
+function collect(value, previous) {
+  return [...previous, value];
 }

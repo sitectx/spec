@@ -5,6 +5,7 @@ import path from "node:path";
 import { stableJson } from "./artifacts.js";
 import { ensureParentDirectory, fileExists, writeUtf8 } from "./filesystem.js";
 import { applyPresetMetadata, normalizePreset, presetActionBoost, presetCatalogRoles, presetRoleBoost } from "./presets.js";
+import { createRemoteFetchPolicy, fetchValidatedResponse, readLimitedText, validateRemoteFetchUrl } from "./remote-fetch.js";
 import { scanForSecrets, redactSecretsInString } from "./secrets.js";
 import { isLocalhostUrl } from "./urls.js";
 
@@ -45,6 +46,7 @@ const XML_CONTENT_TYPES = ["application/xml", "text/xml", "application/rss+xml"]
 const MAX_EXCERPT_LENGTH = 800;
 const MAX_SITEMAP_DEPTH = 3;
 const MAX_CHILD_SITEMAPS = 12;
+const MAX_FETCH_REDIRECTS = 5;
 
 export async function discoverSite(options = {}) {
   const generatedAt = new Date().toISOString();
@@ -56,6 +58,7 @@ export async function discoverSite(options = {}) {
   const preset = normalizePreset(options.preset);
   const base = normalizeBaseUrl(options.url);
   enforceDiscoveryScheme(base.normalizedBaseUrl);
+  const fetchPolicy = createDiscoveryFetchPolicy(base);
   emitProgress(options, {
     stage: "start",
     message: `Preparing bounded crawl for ${base.siteUrl}`,
@@ -83,13 +86,13 @@ export async function discoverSite(options = {}) {
     message: "Checking robots.txt",
     url: new URL("/robots.txt", base.origin).toString()
   });
-  const robots = await fetchRobots(base, { timeout, maxBytes });
+  const robots = await fetchRobots(base, { timeout, maxBytes, policy: fetchPolicy });
   emitProgress(options, {
     stage: "sitemap",
     message: "Looking for sitemaps",
     url: base.origin
   });
-  const sitemapUrls = await fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robots, preset });
+  const sitemapUrls = await fetchSitemapCandidates(base, { timeout, maxBytes, policy: fetchPolicy, warnings, robots, preset });
   emitProgress(options, {
     stage: "queue",
     message: sitemapUrls.length > 0
@@ -133,9 +136,21 @@ export async function discoverSite(options = {}) {
     });
     const fetched = await fetchPage(candidate.url, {
       timeout,
-      maxBytes
+      maxBytes,
+      policy: fetchPolicy
     });
     if (!fetched.ok) {
+      if (fetched.reason === "off-origin-redirect") {
+        emitProgress(options, {
+          stage: "skip",
+          message: `Skipped ${displayCrawlPath(candidate.url)}: ${fetched.message}`,
+          url: candidate.url,
+          reason: fetched.reason
+        });
+        warnings.push(`Skipped redirect outside origin: ${candidate.url}`);
+        skipped.push({ url: candidate.url, reason: fetched.reason });
+        continue;
+      }
       const reason = fetched.reason === "unsupported-content-type" ? "non-html" : "fetch-failed";
       emitProgress(options, {
         stage: "skip",
@@ -505,6 +520,12 @@ function navigationPriority(item, base, preset = "auto") {
   return score + presetRoleBoost(preset, item.role || pageRoleForUrl(item.url, {}));
 }
 
+function createDiscoveryFetchPolicy(base) {
+  return createRemoteFetchPolicy(base.normalizedBaseUrl, {
+    allowOrigins: isLocalhostUrl(base.normalizedBaseUrl) ? [base.origin] : []
+  });
+}
+
 function enforceDiscoveryScheme(url) {
   const parsed = new URL(url);
   if (parsed.protocol === "https:") {
@@ -516,9 +537,9 @@ function enforceDiscoveryScheme(url) {
   throw new Error("Discovery requires HTTPS for non-localhost URLs.");
 }
 
-async function fetchRobots(base, { timeout, maxBytes }) {
+async function fetchRobots(base, { timeout, maxBytes, policy }) {
   const url = new URL("/robots.txt", base.origin).toString();
-  const result = await fetchPage(url, { timeout, maxBytes, acceptAnyText: true });
+  const result = await fetchPage(url, { timeout, maxBytes, acceptAnyText: true, policy });
   if (!result.ok) {
     return {
       url,
@@ -542,7 +563,7 @@ async function fetchRobots(base, { timeout, maxBytes }) {
   };
 }
 
-async function fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robots, preset }) {
+async function fetchSitemapCandidates(base, { timeout, maxBytes, policy, warnings, robots, preset }) {
   const seedUrls = uniqueStrings([
     ...(robots?.sitemapUrls || []),
     new URL("/sitemap.xml", base.origin).toString(),
@@ -565,7 +586,7 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robot
       return;
     }
     seenSitemaps.add(normalizedSitemapUrl);
-    const result = await fetchPage(normalizedSitemapUrl, { timeout, maxBytes, acceptAnyText: true });
+    const result = await fetchPage(normalizedSitemapUrl, { timeout, maxBytes, acceptAnyText: true, policy });
     if (!result.ok || result.status >= 400) {
       if (depth === 0) {
         warnings.push(`Sitemap not found or not readable: ${displayCrawlPath(normalizedSitemapUrl)}`);
@@ -609,36 +630,95 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, warnings, robot
   return rankSitemapUrls([...new Set(pageUrls)], base, preset);
 }
 
-async function fetchPage(url, { timeout, maxBytes, acceptAnyText = false }) {
+async function fetchPage(url, { timeout, maxBytes, acceptAnyText = false, policy, maxRedirects = MAX_FETCH_REDIRECTS }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const response = await fetch(url, {
-      redirect: "follow",
-      signal: controller.signal
-    });
-    const contentType = response.headers.get("content-type") || "";
-    if (!acceptAnyText && !isHtmlContent(contentType)) {
+    let currentUrl = new URL(url).toString();
+    for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
+      const policyCheck = await validateRemoteFetchUrl(currentUrl, policy);
+      if (!policyCheck.ok) {
+        return {
+          ok: false,
+          status: 0,
+          finalUrl: currentUrl,
+          contentType: "",
+          body: "",
+          byteLength: 0,
+          reason: redirectCount > 0 && policy?.baseOrigin && !sameOrigin(currentUrl, policy.baseOrigin)
+            ? "off-origin-redirect"
+            : "fetch-policy",
+          message: policyCheck.error || "URL blocked by discovery fetch policy"
+        };
+      }
+
+      const response = await fetchValidatedResponse(currentUrl, {
+        signal: controller.signal,
+        policyCheck
+      });
+      if (isRedirectStatus(response.status)) {
+        const location = response.headers.get("location");
+        if (!location) {
+          return {
+            ok: false,
+            status: response.status,
+            finalUrl: currentUrl,
+            contentType: "",
+            body: "",
+            byteLength: 0,
+            reason: "redirect",
+            message: `Redirect from ${currentUrl} is missing a Location header.`
+          };
+        }
+        if (redirectCount === maxRedirects) {
+          return {
+            ok: false,
+            status: response.status,
+            finalUrl: currentUrl,
+            contentType: "",
+            body: "",
+            byteLength: 0,
+            reason: "redirect",
+            message: `Too many redirects while fetching ${url}.`
+          };
+        }
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!acceptAnyText && !isHtmlContent(contentType)) {
+        return {
+          ok: false,
+          status: response.status,
+          finalUrl: currentUrl,
+          contentType,
+          reason: "unsupported-content-type",
+          message: isXmlContent(contentType)
+            ? `XML sitemap/feed, not page HTML`
+            : `unsupported content type ${contentType || "unknown"}`
+        };
+      }
+      const body = await readLimitedText(response, maxBytes, { truncate: true });
       return {
-        ok: false,
+        ok: response.ok,
         status: response.status,
-        finalUrl: response.url,
+        finalUrl: currentUrl,
         contentType,
-        reason: "unsupported-content-type",
-        message: isXmlContent(contentType)
-          ? `XML sitemap/feed, not page HTML`
-          : `unsupported content type ${contentType || "unknown"}`
+        body,
+        byteLength: Buffer.byteLength(body, "utf8"),
+        message: response.ok ? null : `HTTP ${response.status}`
       };
     }
-    const body = await readLimitedResponse(response, maxBytes);
     return {
-      ok: response.ok,
-      status: response.status,
-      finalUrl: response.url,
-      contentType,
-      body,
-      byteLength: Buffer.byteLength(body, "utf8"),
-      message: response.ok ? null : `HTTP ${response.status}`
+      ok: false,
+      status: 0,
+      finalUrl: url,
+      contentType: "",
+      body: "",
+      byteLength: 0,
+      reason: "redirect",
+      message: `Too many redirects while fetching ${url}.`
     };
   } catch (error) {
     return {
@@ -655,28 +735,8 @@ async function fetchPage(url, { timeout, maxBytes, acceptAnyText = false }) {
   }
 }
 
-async function readLimitedResponse(response, maxBytes) {
-  if (!response.body) {
-    const text = await response.text();
-    return text.slice(0, maxBytes);
-  }
-  const reader = response.body.getReader();
-  const chunks = [];
-  let total = 0;
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) {
-      break;
-    }
-    total += value.byteLength;
-    if (total > maxBytes) {
-      chunks.push(value.slice(0, value.byteLength - (total - maxBytes)));
-      await reader.cancel();
-      break;
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString("utf8");
+function isRedirectStatus(status) {
+  return [301, 302, 303, 307, 308].includes(status);
 }
 
 function extractHtml(html, pageUrl, baseUrl, preset = "auto") {
