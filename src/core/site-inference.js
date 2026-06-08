@@ -1,4 +1,5 @@
-import { normalizeSiteUrl } from "./urls.js";
+import { createRemoteFetchPolicy, fetchText } from "./remote-fetch.js";
+import { isLocalhostUrl, normalizeSiteUrl } from "./urls.js";
 
 const DEFAULT_TIMEOUT_MS = 7000;
 const MAX_HTML_BYTES = 500_000;
@@ -43,51 +44,26 @@ export async function inferSiteContext(options = {}) {
 }
 
 async function fetchHtml(siteUrl, { timeout, maxBytes }) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(siteUrl, {
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        accept: "text/html,application/xhtml+xml"
-      }
-    });
-    if (!response.ok) {
-      throw new Error(`Site returned HTTP ${response.status}.`);
-    }
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType && !contentType.toLowerCase().includes("html")) {
-      throw new Error(`Site returned ${contentType}, not HTML.`);
-    }
-    return readLimitedResponse(response, maxBytes);
-  } finally {
-    clearTimeout(timer);
+  const response = await fetchText(siteUrl, {
+    timeout,
+    maxBytes,
+    policy: createInferenceFetchPolicy(siteUrl)
+  });
+  if (!response.ok) {
+    throw new Error(response.error || `Site returned HTTP ${response.status}.`);
   }
+  const contentType = response.contentType || "";
+  if (contentType && !contentType.toLowerCase().includes("html")) {
+    throw new Error(`Site returned ${contentType}, not HTML.`);
+  }
+  return response.body;
 }
 
-async function readLimitedResponse(response, maxBytes) {
-  if (!response.body) {
-    const text = await response.text();
-    return text.slice(0, maxBytes);
-  }
-  const reader = response.body.getReader();
-  const chunks = [];
-  let total = 0;
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) {
-      break;
-    }
-    total += value.byteLength;
-    if (total > maxBytes) {
-      chunks.push(value.slice(0, value.byteLength - (total - maxBytes)));
-      await reader.cancel();
-      break;
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString("utf8");
+function createInferenceFetchPolicy(siteUrl) {
+  const origin = new URL(siteUrl).origin;
+  return createRemoteFetchPolicy(siteUrl, {
+    allowOrigins: isLocalhostUrl(siteUrl) ? [origin] : []
+  });
 }
 
 function extractSiteMetadata(html) {
