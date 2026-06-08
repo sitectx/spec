@@ -86,6 +86,38 @@ describe("validate", () => {
     expect(result.stdout).toContain("Manifest-linked file is missing: sitectx.json");
   });
 
+  it("manifest link validation rejects sponsored context paths outside the root before reading", async () => {
+    const root = await makeTempRoot();
+    const escapedName = `${path.basename(root)}-escaped-sponsored-context.json`;
+    const escapedPath = path.join(path.dirname(root), escapedName);
+    expect(runCli(["init", "--root", root]).status).toBe(0);
+    await fs.writeFile(escapedPath, "{", "utf8");
+    for (const manifestPath of [
+      path.join(root, ".well-known", "sitectx"),
+      path.join(root, ".well-known", "sitectx.json")
+    ]) {
+      const manifest = await readJson(manifestPath);
+      manifest.commercialContext = {
+        enabled: true,
+        sponsoredContextUrl: `../${escapedName}`,
+        policy: {
+          sponsoredContentMustBeDisclosed: true,
+          agentClicksAreNotBillable: true,
+          paidPlacementsAllowed: true,
+          affiliateLinksAllowed: true,
+          requiresCanonicalLandingPage: true
+        }
+      };
+      await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    }
+
+    const result = runCli(["validate", "--root", root]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Manifest sponsoredContext URL resolves outside the root.");
+    expect(result.stdout).not.toContain("not valid JSON");
+  });
+
   it("warns but validates legacy root-level update files as fallback", async () => {
     const root = await makeTempRoot();
     expect(runCli(["init", "--root", root]).status).toBe(0);

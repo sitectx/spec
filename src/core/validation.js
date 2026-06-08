@@ -3,6 +3,7 @@ import {
   artifactPaths,
   displayPath,
   fileExists,
+  publicPathEscapesRoot,
   readUtf8,
   resolvePublicPath
 } from "./filesystem.js";
@@ -304,6 +305,10 @@ async function validateManifestLinks({ collector, root, manifest }) {
     }
     const resolved = resolvePublicPath(root, link);
     if (!resolved) {
+      if (publicPathEscapesRoot(root, link)) {
+        collector.fail(`manifest.${name}.bounds`, target, `Manifest ${name} URL resolves outside the root.`);
+        continue;
+      }
       collector.warn(
         `manifest.${name}.local`,
         target,
@@ -318,10 +323,6 @@ async function validateManifestLinks({ collector, root, manifest }) {
         target,
         `Manifest ${name} URL resolves to ${display}, expected ${expectedFile}.`
       );
-    }
-    if (path.relative(root, resolved).startsWith("..")) {
-      collector.fail(`manifest.${name}.bounds`, target, `Manifest ${name} URL resolves outside the root.`);
-      continue;
     }
     collector.pass(
       `manifest.${name}.resolve`,

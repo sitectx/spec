@@ -2,7 +2,7 @@ import path from "node:path";
 import { Command } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { printCheckResult, writeError, writeJson, writeLine } from "../output.js";
-import { buildArtifacts, stableJson, toWritePlan } from "../../core/artifacts.js";
+import { artifactSecretErrors, buildArtifacts, stableJson, toWritePlan } from "../../core/artifacts.js";
 import {
   addCommercialConfigChecks,
   addSponsoredContextChecks,
@@ -293,6 +293,17 @@ export async function runSponsorBuild(options = {}) {
       return result;
     }
     const artifacts = buildArtifacts(config);
+    const secretErrors = artifactSecretErrors(artifacts.files);
+    if (secretErrors.length > 0) {
+      result.ok = false;
+      result.errors.push(...secretErrors);
+      if (options.json) {
+        writeJson(result);
+      } else {
+        printSponsorBuildResult(result, options);
+      }
+      return result;
+    }
     const outRoot = path.resolve(root, options.out || ".");
     const plan = toWritePlan(outRoot, artifacts.files);
     for (const file of plan) {
