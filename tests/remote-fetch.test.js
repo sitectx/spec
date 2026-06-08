@@ -4,6 +4,7 @@ import dns from "node:dns/promises";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRemoteFetchPolicy, fetchText, validateRemoteFetchUrl } from "../src/core/remote-fetch.js";
+import { closeServer, listenLocalhost, localServerOrigin } from "./helpers.js";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -194,11 +195,10 @@ async function startRoutes(routes) {
     response.statusCode = 404;
     response.end("not found");
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  const origin = `http://127.0.0.1:${address.port}`;
+  await listenLocalhost(server);
+  const origin = localServerOrigin(server);
   return {
     origin,
-    close: () => new Promise((resolve) => server.close(resolve))
+    close: () => closeServer(server)
   };
 }

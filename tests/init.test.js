@@ -4,20 +4,13 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { discoverForInit, runInit } from "../src/cli/commands/init.js";
 import { EXIT_VALIDATION_FAILED } from "../src/cli/exit-codes.js";
-import { makeTempRoot, readJson, runCli } from "./helpers.js";
+import { closeServer, listenLocalhost, localServerOrigin, makeTempRoot, readJson, runCli } from "./helpers.js";
 
 const servers = [];
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  await Promise.all(
-    servers.splice(0).map(
-      (server) =>
-        new Promise((resolve) => {
-          server.close(resolve);
-        })
-    )
-  );
+  await Promise.all(servers.splice(0).map(closeServer));
 });
 
 const generatedFiles = [
@@ -345,12 +338,9 @@ async function startSite(routes) {
     response.writeHead(200, { "content-type": "text/html" });
     response.end(route);
   });
-  await new Promise((resolve) => {
-    server.listen(0, "127.0.0.1", resolve);
-  });
+  await listenLocalhost(server);
   servers.push(server);
-  const address = server.address();
-  baseUrl = `http://127.0.0.1:${address.port}/`;
+  baseUrl = `${localServerOrigin(server)}/`;
   return { server, url: baseUrl };
 }
 

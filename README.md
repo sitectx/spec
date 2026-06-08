@@ -1,16 +1,21 @@
 # SiteCTX
 
-SiteCTX is a CLI for publishing machine-readable website context with
-deterministic discovery, validation, and human review gates.
+SiteCTX is an npm CLI for publishing machine-readable website context.
 
-Run SiteCTX once, generate the files, review them, and ship them with your site.
-No package install is required in the app you are publishing.
+It writes a small set of public JSON artifacts that automated systems can fetch
+predictably: a discovery manifest, a canonical context snapshot, update feeds,
+catalog pointers, user actions, navigation, and optional disclosed sponsored
+context.
 
-SiteCTX creates a validated `/.well-known/sitectx` manifest, canonical site
-context, freshness metadata, reviewable updates, actions, navigation, profile
-links, and catalog pointers for AI systems and internal tools.
+Use SiteCTX as a publishing tool. The website you publish does not need to
+install SiteCTX, import it at runtime, or ship `node_modules`.
 
-## Zero-Install Quick Start
+## Requirements
+
+- Node.js 20 or newer.
+- A site root or public directory where static files can be written.
+
+## Quick Start
 
 ```bash
 npx sitectx@latest init
@@ -20,27 +25,7 @@ npx sitectx@latest inspect .
 ```
 
 In an interactive terminal, `init` asks for the site URL and output location,
-discovers the site, shows what it found, writes the files, and validates them.
-
-## Vertical Presets
-
-Use a preset when you already know the kind of site. Presets tune discovery so
-SiteCTX spends its limited crawl budget on the pages, actions, and catalog
-signals that matter for that vertical.
-
-```bash
-npx sitectx@latest init --preset ecommerce
-npx sitectx@latest init --preset nonprofit
-npx sitectx@latest init --preset saas
-npx sitectx@latest init --preset local-business
-npx sitectx@latest init --preset docs
-```
-
-The same presets work in the advanced draft workflow:
-
-```bash
-npx sitectx@latest discover https://example.com --preset ecommerce
-```
+discovers useful site signals, writes the files, and validates them.
 
 ## Existing App
 
@@ -48,40 +33,85 @@ For a Next.js, Vite, Astro, or static app with a `public/` directory:
 
 ```bash
 npx sitectx@latest init --root . --public-dir ./public
+npx sitectx@latest validate ./public
 ```
 
-When SiteCTX detects `./public`, generated public files go there so the app can
-serve:
-
-```text
-/.well-known/sitectx
-/.well-known/sitectx.json
-/sitectx.json
-/sitectx/catalogs.json
-/sitectx/updates.json
-/sitectx/updates.ndjson
-```
-
-The source config stays in the app root:
+Generated public files go under `./public` so the app can serve them. The local
+source config stays at the project root:
 
 ```text
 sitectx.config.json
 ```
 
-SiteCTX does not mutate `package.json`, create `node_modules`, or write a package
-lock during `init`.
+`init` does not mutate `package.json`, create `node_modules`, or write a package
+lock.
 
-## Localhost Discovery
+## What Gets Published
 
-Start your app:
+| Path | Role |
+| --- | --- |
+| `/.well-known/sitectx` | Preferred discovery manifest. This is the entry point consumers fetch first. |
+| `/.well-known/sitectx.json` | Optional alias for the same discovery manifest. |
+| `/sitectx.json` | Canonical context snapshot. This is linked from the discovery manifest; it is not a manifest alias. |
+| `/sitectx/catalogs.json` | Catalog pointer index for dynamic collections such as products, listings, jobs, events, menus, locations, services, or offers. |
+| `/sitectx/updates.json` | JSON snapshot of current or recent updates. |
+| `/sitectx/updates.ndjson` | Newline-delimited update stream, one update object per line. |
+| `/sitectx/sponsored-context.json` | Optional disclosed sponsored context resource, only when intentionally enabled. |
+
+The local `sitectx.config.json` is publisher source data. Do not serve it unless
+you intentionally want to expose it.
+
+## Discovery Manifest
+
+The discovery manifest is compact and points to the rest of the SiteCTX output:
+
+```json
+{
+  "specVersion": "0.1",
+  "kind": "sitectx.manifest",
+  "site": {
+    "name": "Example Site",
+    "url": "https://example.com",
+    "description": "Example Site helps teams publish useful website context.",
+    "language": "en"
+  },
+  "summary": "Example Site helps teams publish useful website context.",
+  "freshness": {
+    "status": "fresh"
+  },
+  "actions": [
+    {
+      "id": "action:contact",
+      "type": "contact",
+      "url": "https://example.com/contact",
+      "label": "Contact",
+      "priority": 1,
+      "sourceUrl": "https://example.com/",
+      "sourceText": "Contact"
+    }
+  ],
+  "generatedAt": "2026-06-08T12:00:00.000Z",
+  "context": {
+    "url": "/sitectx.json",
+    "contentType": "application/json"
+  },
+  "updatesNdjson": {
+    "url": "/sitectx/updates.ndjson",
+    "contentType": "application/x-ndjson"
+  }
+}
+```
+
+Actions describe user intents available on the site. They should point to
+human-visible URLs and use stable IDs such as `action:contact`, `action:donate`,
+`action:book`, `action:buy`, `action:signup`, or `action:subscribe`.
+
+## Discovery and Review
+
+For a running local site:
 
 ```bash
 npm run dev
-```
-
-Discover the running site:
-
-```bash
 npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
 ```
 
@@ -91,28 +121,43 @@ This writes:
 sitectx.config.draft.json
 ```
 
-Discovery drafts are review-required by default. A normal generate command will
-fail until the draft is reviewed:
+Discovery drafts are review-required by default. `generate` refuses an
+unreviewed draft unless you explicitly pass `--allow-draft`.
+
+Review the discovered summary, actions, navigation, catalogs, and source pages:
 
 ```bash
 npx sitectx@latest review sitectx.config.draft.json
+npx sitectx@latest generate sitectx.config.draft.json ./public --force
 ```
 
-The review flow lets you approve or edit the discovered summary, actions,
-navigation, catalogs, and source pages before publishing.
-
-```bash
-npx sitectx@latest generate sitectx.config.draft.json ./public
-```
-
-To generate from an unreviewed draft during testing, be explicit:
+For test-only generation from an unreviewed draft:
 
 ```bash
 npx sitectx@latest generate sitectx.config.draft.json ./public --allow-draft --force
 ```
 
-If you use a localhost URL, SiteCTX accepts it for development and warns you to
-replace `site.url` with the production URL before publishing.
+Localhost URLs are accepted for development. Replace `siteUrl` with the
+production URL before publishing.
+
+## Vertical Presets
+
+Presets tune discovery so SiteCTX spends its limited crawl budget on the pages,
+actions, and catalog signals that matter for a site type.
+
+```bash
+npx sitectx@latest init --preset ecommerce
+npx sitectx@latest init --preset nonprofit
+npx sitectx@latest init --preset saas
+npx sitectx@latest init --preset local-business
+npx sitectx@latest init --preset docs
+```
+
+The same presets work with discovery:
+
+```bash
+npx sitectx@latest discover https://example.com --preset ecommerce
+```
 
 ## Validate Before Deploy
 
@@ -129,76 +174,12 @@ npx sitectx@latest doctor https://example.com
 npx sitectx@latest inspect https://example.com
 ```
 
-## What Gets Generated
-
-Public files:
-
-```text
-.well-known/sitectx
-.well-known/sitectx.json
-sitectx.json
-sitectx/catalogs.json
-sitectx/updates.json
-sitectx/updates.ndjson
-```
-
-Local source config:
-
-```text
-sitectx.config.json
-```
-
-The manifest at `/.well-known/sitectx` is the entry point. It includes site
-identity, summary, freshness, important pages, user actions, navigation, and
-links to the canonical context, catalog index, and update feeds.
-
-Actions tell systems what users can do:
-
-```json
-{
-  "id": "action:contact",
-  "type": "contact",
-  "url": "https://example.com/contact",
-  "label": "Contact",
-  "priority": 1
-}
-```
-
-Navigation tells systems how the site presents itself:
-
-```json
-{
-  "label": "Products",
-  "url": "https://example.com/products",
-  "role": "products"
-}
-```
-
-Catalogs point to dynamic inventory, listings, offers, or external commerce
-systems without crawling every item:
-
-```json
-{
-  "id": "catalog:shopify-products",
-  "type": "products",
-  "status": "detected",
-  "source": "shopify",
-  "url": "https://example.com/products.json",
-  "label": "Shopify product catalog",
-  "requiresSetup": false
-}
-```
+Use `--strict` with `validate` or `doctor` when warnings should fail CI.
 
 ## Sponsored Context
 
-Sponsored Context lets a site publish disclosed, machine-readable commercial
-placements for agents and automated systems. It is not a click-fraud,
-bot-impression, cloaking, keyword-stuffing, or ranking mechanism. Automated
-fetches, crawler visits, bot impressions, and agent clicks must not be
-represented as human ad engagement.
-
-Sponsored Context is disabled by default. Enable it only when you intentionally
-want to publish disclosed commercial placements:
+Sponsored context is disabled by default. Enable it only when you intentionally
+want to publish disclosed commercial placements.
 
 ```bash
 npx sitectx@latest sponsor init --enable
@@ -208,7 +189,7 @@ npx sitectx@latest sponsor add \
   --title "Defensible records for pricing changes" \
   --summary "Create evidence packets for pricing page changes, reviews, and decisions." \
   --category "compliance_software" \
-  --price "$250/month" \
+  --price '$250/month' \
   --currency "USD" \
   --valid-until "2026-07-04" \
   --canonical-action-url "https://pricepapertrail.com/pilot" \
@@ -218,103 +199,44 @@ npx sitectx@latest sponsor validate
 npx sitectx@latest sponsor build --force
 ```
 
-When enabled, SiteCTX writes:
+Policy guardrails:
 
-```text
-/sitectx/sponsored-context.json
-```
+- Sponsored content must be disclosed.
+- Canonical action URLs must be explicit.
+- Agent fetches, crawler visits, bot impressions, and agent clicks are
+  non-billable.
+- Sponsored context is not fake PPC, hidden ad inventory, cloaking, keyword
+  stuffing, or a ranking guarantee.
 
-and links it from the manifest and context with a `commercialContext` policy.
-The file uses disclosed placements:
-
-```json
-{
-  "id": "spn_example_001",
-  "type": "sponsored_offer",
-  "status": "active",
-  "sponsor": {
-    "name": "Example Sponsor",
-    "url": "https://sponsor.example"
-  },
-  "disclosure": {
-    "label": "Sponsored",
-    "relationship": "paid_placement",
-    "plainLanguage": "This is a paid placement from Example Sponsor."
-  },
-  "canonicalAction": {
-    "label": "Request pilot",
-    "url": "https://sponsor.example/pilot",
-    "actionType": "lead_form"
-  },
-  "measurement": {
-    "billableEvents": [
-      "sponsored_listing_active",
-      "verified_human_lead",
-      "qualified_conversion"
-    ],
-    "nonBillableEvents": [
-      "agent_fetch",
-      "agent_click",
-      "crawler_visit",
-      "bot_impression"
-    ]
-  }
-}
-```
-
-Validation fails if a sponsored placement lacks disclosure, sponsor identity, a
-canonical action URL, valid dates, or marks automated agent, crawler, bot,
-click, fetch, visit, or impression events as billable. Validation warns on weak
-evidence, missing human-visible disclosure references, domain mismatches, long
-summaries, and relevant-query stuffing.
-
-Non-goals:
-
-- Not fake PPC.
-- Not hidden ad inventory.
-- Not SEO keyword stuffing.
-- Not a ranking guarantee.
-- Not a way to bill advertisers for bot traffic.
-
-## Review Gate
-
-`discover` writes a review-required draft:
-
-```json
-{
-  "discovery": {
-    "status": "draft_review_required"
-  }
-}
-```
-
-`generate` refuses that draft by default. Review the config and set
-`discovery.status` to `"reviewed"` with `sitectx review`, or pass
-`--allow-draft` when you intentionally want to generate test artifacts.
+## Common Commands
 
 ```bash
+npx sitectx@latest init
+npx sitectx@latest init --root . --public-dir ./public
+npx sitectx@latest init --preset ecommerce
+npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
 npx sitectx@latest review sitectx.config.draft.json
+npx sitectx@latest generate sitectx.config.draft.json ./public --force
+npx sitectx@latest sponsor init --enable
+npx sitectx@latest sponsor validate
+npx sitectx@latest sponsor build --force
+npx sitectx@latest validate ./public
+npx sitectx@latest doctor https://example.com
+npx sitectx@latest inspect https://example.com
+npx sitectx@latest version
 ```
 
-## No Install Required
-
-The public workflow is:
-
-```bash
-npx sitectx@latest ...
-```
-
-Teams that want pinned repeatable scripts can add SiteCTX as a local dev
-dependency, but that is optional and not required for publishing.
+The npm package exposes the `sitectx` CLI. It is not a runtime SDK.
 
 ## Troubleshooting
 
 Localhost server not running:
 `discover`, `doctor`, or `inspect` will fail cleanly if
-`http://localhost:3000` is not reachable. Start the app first with `npm run dev`.
+`http://localhost:3000` is not reachable. Start the app first with
+`npm run dev`.
 
 Existing files:
-Interactive `init` asks before overwriting. Non-interactive runs require
+Interactive `init` asks before overwriting. Non-interactive generation requires
 `--force`.
 
 Invalid URL:
@@ -326,39 +248,23 @@ Pass `--public-dir ./public` for app output. If no public directory is detected,
 SiteCTX writes to the selected root.
 
 Draft config needs review:
-Run `review sitectx.config.draft.json` before generate. Use
-`generate sitectx.config.draft.json ./public --allow-draft --force` only for
-test generation.
-
-## Common Commands
-
-```bash
-npx sitectx@latest init
-npx sitectx@latest init --preset ecommerce
-npx sitectx@latest discover http://localhost:3000 --max-pages 25 --max-depth 2
-npx sitectx@latest review sitectx.config.draft.json
-npx sitectx@latest generate sitectx.config.draft.json ./public --force
-npx sitectx@latest sponsor init --enable
-npx sitectx@latest sponsor validate
-npx sitectx@latest sponsor build --force
-npx sitectx@latest validate ./public
-npx sitectx@latest doctor ./public
-npx sitectx@latest inspect ./public
-npx sitectx@latest version
-```
+Run `review sitectx.config.draft.json` before `generate`. Use
+`--allow-draft` only for test generation.
 
 ## Specification
 
 The current draft is [SiteCTX v0.1](versions/v0.1/README.md).
 
-Repository references:
+Useful references:
 
-- [versions/v0.1/SPEC.md](versions/v0.1/SPEC.md)
-- [versions/v0.1/schema/sitectx.schema.json](versions/v0.1/schema/sitectx.schema.json)
-- [versions/v0.1/schema/catalogs.schema.json](versions/v0.1/schema/catalogs.schema.json)
-- [versions/v0.1/schema/sponsored-context.schema.json](versions/v0.1/schema/sponsored-context.schema.json)
-- [versions/v0.1/examples](versions/v0.1/examples)
-- [versions/v0.1/examples/sponsored-context.json](versions/v0.1/examples/sponsored-context.json)
+- [v0.1 implementer README](versions/v0.1/README.md)
+- [v0.1 draft specification](versions/v0.1/SPEC.md)
+- [discovery manifest schema](versions/v0.1/schema/manifest.schema.json)
+- [context snapshot schema](versions/v0.1/schema/context.schema.json)
+- [catalog schema](versions/v0.1/schema/catalogs.schema.json)
+- [update snapshot schema](versions/v0.1/schema/updates.schema.json)
+- [sponsored context schema](versions/v0.1/schema/sponsored-context.schema.json)
+- [examples](versions/v0.1/examples)
 
 ## Local Development
 
@@ -371,7 +277,7 @@ npm run pack:check
 node ./bin/sitectx.js --help
 ```
 
-Tarball smoke without installing into an app:
+Tarball smoke test without installing SiteCTX into an app:
 
 ```bash
 cd /Users/scottmay/Projects/spec
@@ -386,7 +292,7 @@ npm exec --cache /private/tmp/sitectx-npm-cache \
   -- sitectx --help
 ```
 
-The Python validator is an optional repository utility for maintaining draft spec
+The Python validator is an optional repository utility for maintaining draft
 examples and schemas. It is not required for npm users.
 
 ## License

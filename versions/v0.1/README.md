@@ -1,80 +1,330 @@
 # SiteCTX v0.1
 
-SiteCTX v0.1 is a draft JSON manifest format for publishing fresh, structured
-site context to automated systems. The required core is the manifest; publishers
-may also link to optional catalog indexes, update feeds, public evidence
-resources, and disclosed sponsored context.
-The manifest should include enough compact context to be useful on first fetch,
-including site description, summary, freshness, important records, and user
-actions such as donate, contact, book, buy, sign up, and subscribe.
-Actions may include priority, source URL, and source text so consumers can
-understand the publisher-visible path for each intent.
+Status: draft.
 
-The preferred discovery endpoint is:
+This README is the v0.1 implementer map. It explains the public artifacts,
+schema files, examples, and compatibility rules in this directory. Field-level
+normative language for the broader v0.1 model lives in [SPEC.md](SPEC.md);
+generated npm CLI artifacts are validated by the artifact JSON Schemas in
+[schema](schema).
+
+## Core Model
+
+SiteCTX v0.1 separates discovery from context.
+
+The discovery manifest lives at:
 
 ```text
 /.well-known/sitectx
 ```
 
-Optional aliases are:
+The optional alias is:
 
 ```text
 /.well-known/sitectx.json
 ```
 
-The manifest should be served as JSON and should return `application/json` where
-practical.
+Both paths should return the same discovery manifest JSON. The discovery
+manifest is intentionally compact: site identity, summary, freshness, important
+records, actions, navigation, and links to richer resources.
 
-The conventional current context snapshot path is:
+The canonical context snapshot lives at:
 
 ```text
 /sitectx.json
 ```
 
-`/sitectx.json` is not a manifest alias.
+`/sitectx.json` is not a discovery alias. It is a linked context resource with
+the fuller `sitectx.context` payload.
 
-Optional conventional linked resources include:
+Optional linked resources include:
 
 ```text
-/sitectx/updates.ndjson
-/sitectx/updates.json
 /sitectx/catalogs.json
+/sitectx/updates.json
+/sitectx/updates.ndjson
 /sitectx/sponsored-context.json
 /sitectx/evidence.json
 /sitectx/evidence/{id}.json
 ```
 
+## Artifact Map
+
+| Artifact | Kind or marker | Schema | Purpose |
+| --- | --- | --- | --- |
+| `/.well-known/sitectx` | `kind: "sitectx.manifest"` | [manifest.schema.json](schema/manifest.schema.json) | Preferred discovery entry point. |
+| `/.well-known/sitectx.json` | `kind: "sitectx.manifest"` | [manifest.schema.json](schema/manifest.schema.json) | Optional alias for the same discovery manifest. |
+| `/sitectx.json` | `kind: "sitectx.context"` and `sitectx_version: "0.1"` | [context.schema.json](schema/context.schema.json) | Canonical current context snapshot. |
+| `/sitectx/catalogs.json` | `kind: "sitectx.catalogs"` | [catalogs.schema.json](schema/catalogs.schema.json) | Pointer index for dynamic collections. |
+| `/sitectx/updates.json` | `kind: "sitectx.updates"` | [updates.schema.json](schema/updates.schema.json) | JSON update snapshot. |
+| `/sitectx/updates.ndjson` | `kind: "sitectx.update"` per line | [update.schema.json](schema/update.schema.json) | Append-friendly update stream. |
+| `/sitectx/sponsored-context.json` | `kind: "sitectx.sponsoredContext"` | [sponsored-context.schema.json](schema/sponsored-context.schema.json) | Optional disclosed sponsored commercial placements. |
+| `sitectx.config.json` | CLI source config | [config.schema.json](schema/config.schema.json) | Local publisher config; not a public artifact. |
+
+The repo also includes [sitectx.schema.json](schema/sitectx.schema.json), the
+broader draft context model used by the hand-written v0.1 examples and Python
+validator. For generated CLI output, validate each artifact against its matching
+artifact schema above.
+
+## Discovery Manifest Shape
+
+A generated discovery manifest uses `specVersion` and `kind`:
+
+```json
+{
+  "specVersion": "0.1",
+  "kind": "sitectx.manifest",
+  "site": {
+    "name": "Example Site",
+    "url": "https://example.com",
+    "description": "Example Site helps teams publish useful website context.",
+    "language": "en"
+  },
+  "summary": "Example Site helps teams publish useful website context.",
+  "freshness": {
+    "status": "fresh"
+  },
+  "records": [
+    {
+      "id": "page:home",
+      "type": "page",
+      "url": "https://example.com/",
+      "title": "Home",
+      "role": "home",
+      "summary": "Example Site helps teams publish useful website context."
+    }
+  ],
+  "actions": [
+    {
+      "id": "action:contact",
+      "type": "contact",
+      "url": "https://example.com/contact",
+      "label": "Contact",
+      "priority": 1,
+      "sourceUrl": "https://example.com/",
+      "sourceText": "Contact"
+    }
+  ],
+  "generatedAt": "2026-06-08T12:00:00.000Z",
+  "context": {
+    "url": "/sitectx.json",
+    "contentType": "application/json"
+  }
+}
+```
+
+Consumers should resolve root-relative links against the publisher origin and
+should tolerate unknown fields.
+
+## Context Snapshot Shape
+
+The context snapshot carries the fuller context model:
+
+```json
+{
+  "specVersion": "0.1",
+  "sitectx_version": "0.1",
+  "kind": "sitectx.context",
+  "site": {
+    "name": "Example Site",
+    "url": "https://example.com",
+    "description": "Example Site helps teams publish useful website context.",
+    "language": "en"
+  },
+  "freshness": {
+    "status": "fresh",
+    "generated_at": "2026-06-08T12:00:00.000Z"
+  },
+  "records": [
+    {
+      "id": "page:home",
+      "type": "page",
+      "url": "https://example.com/",
+      "observed_at": "2026-06-08T12:00:00.000Z",
+      "title": "Home",
+      "summary": "Example Site helps teams publish useful website context.",
+      "page_role": "home"
+    }
+  ],
+  "resources": {
+    "self": "https://example.com/sitectx.json",
+    "updates": "https://example.com/sitectx/updates.ndjson",
+    "updates_json": "https://example.com/sitectx/updates.json"
+  }
+}
+```
+
+Records are compact descriptions of pages, entities, offers, or updates. Each
+record should have a stable `id`, a `type`, an `observed_at` timestamp, and at
+least one source URL or canonical URL.
+
+## Actions
+
+Actions describe user intents that are available on the human site. They are not
+analytics events and should not point at hidden or machine-only endpoints.
+
+Required fields:
+
+- `id`: stable publisher-defined identifier, such as `action:contact`.
+- `type`: stable intent string, such as `contact`, `donate`, `book`, `buy`,
+  `signup`, `subscribe`, `apply`, `download`, or `search`.
+- `url`: canonical human-visible URL where the action can be completed.
+- `label`: human-readable action label.
+
+Recommended fields:
+
+- `priority`: lower numbers are more important.
+- `sourceUrl`: page where the action was observed.
+- `sourceText`: human-visible text that supported the action.
+
+Consumers should treat action `type` values as extensible strings.
+
+## Updates
+
+SiteCTX has three related update surfaces:
+
+| Surface | Shape | Use |
+| --- | --- | --- |
+| Context record | `type: "update"` inside `/sitectx.json` records | Compact current context. |
+| JSON snapshot | `/sitectx/updates.json` with `kind: "sitectx.updates"` | Batch-friendly current or recent updates. |
+| NDJSON stream | `/sitectx/updates.ndjson`, one `sitectx.update` object per line | Append-friendly polling and streaming. |
+
+Generated update feed records use `publishedAt` and `generatedAt`. Core context
+records use snake_case fields such as `observed_at`, `published_at`, and
+`updated_at`. Consumers should be tolerant during v0.1 and validate against the
+schema for the exact artifact being read.
+
+Example NDJSON line:
+
+```json
+{"specVersion":"0.1","kind":"sitectx.update","siteUrl":"https://example.com","id":"update:hours:2026-06-08","type":"update","url":"https://example.com/hours","title":"Holiday Hours Updated","summary":"Store hours changed for the holiday week.","publishedAt":"2026-06-08T12:00:00.000Z"}
+```
+
+## Catalogs
+
+Catalogs point to dynamic collections without forcing the manifest or context
+snapshot to contain every item.
+
+Common catalog types include:
+
+- `products`
+- `listings`
+- `jobs`
+- `events`
+- `menus`
+- `locations`
+- `services`
+- `offers`
+
+Catalog entries should include `id`, `type`, `status`, `url`, and `label`.
+`requiresSetup: true` means a publisher still needs to configure a source
+system, hosted feed, or validated export before consumers treat the catalog as
+complete.
+
+## Sponsored Context
+
+Sponsored context is optional and disabled by default. When present, it must be
+disclosed, canonical, and separated from organic context.
+
+Required policy:
+
+- Sponsored content must be disclosed.
+- Agents must preserve disclosure.
+- Canonical landing or action URLs must be explicit.
+- Agent fetches, crawler visits, bot impressions, and agent clicks are
+  non-billable.
+
+Sponsored context must not be used for fake PPC, hidden ad inventory, cloaking,
+keyword stuffing, bot-traffic billing, or ranking claims.
+
+## Conformance Guidance
+
+Publishers should:
+
+- Serve `/.well-known/sitectx` as JSON.
+- Keep `/.well-known/sitectx.json` identical when the alias is present.
+- Treat `/sitectx.json` as a linked context snapshot, not an alias.
+- Use stable IDs for records, actions, catalogs, and placements.
+- Set freshness conservatively for fast-changing offers, availability, hours,
+  or alerts.
+- Keep secrets, private audit notes, API keys, session tokens, and internal
+  identifiers out of public artifacts.
+- Validate local artifacts before deploy and run `doctor` against the deployed
+  URL after deploy.
+
+Consumers should:
+
+- Fetch `/.well-known/sitectx` first.
+- Follow linked resources only after resolving URLs against the publisher
+  origin.
+- Respect normal HTTP caching semantics.
+- Ignore unknown fields they do not understand.
+- Avoid treating SiteCTX as crawl permission, training permission, legal
+  certification, ranking guarantee, or a replacement for source pages.
+- Preserve sponsored disclosures when using sponsored context.
+
 ## Draft Documents
 
-- [SPEC.md](SPEC.md): normative v0.1 draft
-- [conformance.md](conformance.md): conformance classes and validation guidance
+- [SPEC.md](SPEC.md): normative v0.1 draft text.
+- [conformance.md](conformance.md): conformance classes and validation guidance.
 - [security-and-privacy.md](security-and-privacy.md): security and privacy
-  considerations
-- [schema/sitectx.schema.json](schema/sitectx.schema.json): JSON Schema
+  considerations.
+- [CHANGELOG.md](CHANGELOG.md): v0.1 draft changes.
+
+## Schema Index
+
+- [schema/manifest.schema.json](schema/manifest.schema.json): generated
+  discovery manifest.
+- [schema/context.schema.json](schema/context.schema.json): generated context
+  snapshot.
+- [schema/sitectx.schema.json](schema/sitectx.schema.json): broader draft
+  context model used by hand-written examples.
+- [schema/config.schema.json](schema/config.schema.json): local CLI source
+  config.
+- [schema/catalogs.schema.json](schema/catalogs.schema.json): catalog pointer
+  index.
+- [schema/updates.schema.json](schema/updates.schema.json): JSON update
+  snapshot.
+- [schema/update.schema.json](schema/update.schema.json): individual update
+  record, including NDJSON lines.
 - [schema/sponsored-context.schema.json](schema/sponsored-context.schema.json):
-  sponsored context JSON Schema
+  disclosed sponsored context.
 
 ## Examples
 
 - [examples/minimal.sitectx.json](examples/minimal.sitectx.json): smallest useful
-  manifest
+  broader context example.
 - [examples/standard.sitectx.json](examples/standard.sitectx.json): broader
-  manifest with pages, entities, offers, updates, resources, and feeds
-- [examples/catalogs.json](examples/catalogs.json): catalog pointer index for
-  dynamic inventory or listing sources
-- [examples/sponsored-context.json](examples/sponsored-context.json): disclosed
-  sponsored commercial placement resource
-- [examples/updates.ndjson](examples/updates.ndjson): line-delimited update feed
-- [examples/updates.json](examples/updates.json): JSON update snapshot
-- [examples/evidence.json](examples/evidence.json): public evidence index
+  context example with pages, entities, offers, updates, resources, and feeds.
+- [examples/catalogs.json](examples/catalogs.json): catalog pointer index.
+- [examples/updates.json](examples/updates.json): update snapshot example.
+- [examples/updates.ndjson](examples/updates.ndjson): line-delimited update
+  feed example.
+- [examples/evidence.json](examples/evidence.json): public evidence index.
 - [examples/evidence-record.json](examples/evidence-record.json): individual
-  public evidence record
-- [examples/page-record.json](examples/page-record.json): standalone page record
+  public evidence record.
+- [examples/page-record.json](examples/page-record.json): standalone page
+  record.
+- [examples/sponsored-context.json](examples/sponsored-context.json): disclosed
+  sponsored commercial placement resource.
+
+## NPM CLI
+
+The npm package publishes the generated artifact set and validates it against the
+artifact schemas:
+
+```bash
+npx sitectx@latest init
+npx sitectx@latest validate ./public
+npx sitectx@latest doctor https://example.com
+```
+
+See the repository root [README.md](../../README.md) for package usage.
 
 ## Compatibility Notes
 
-SiteCTX v0.1 consumers should tolerate unknown fields as extensions. Publishers
-should namespace extension keys where practical.
+SiteCTX v0.1 is intentionally extensible. Consumers should tolerate unknown
+fields and publishers should namespace extension keys where practical.
 
 SiteCTX does not define crawl permissions, legal certifications, model training
 permissions, ranking guarantees, or a complete ontology.

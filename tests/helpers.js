@@ -49,4 +49,43 @@ export async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, "utf8"));
 }
 
+export async function listenLocalhost(server) {
+  await new Promise((resolve, reject) => {
+    const onError = (error) => {
+      server.off("listening", onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      server.off("error", onError);
+      resolve();
+    };
+
+    server.once("error", onError);
+    server.listen(0, "127.0.0.1", onListening);
+  });
+}
+
+export function localServerOrigin(server) {
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Local test server is not listening.");
+  }
+  return `http://127.0.0.1:${address.port}`;
+}
+
+export async function closeServer(server) {
+  if (!server.listening) {
+    return;
+  }
+  await new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
 export const isoDateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
