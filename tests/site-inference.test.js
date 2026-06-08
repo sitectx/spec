@@ -1,19 +1,13 @@
 import http from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { inferSiteContext } from "../src/core/site-inference.js";
+import { closeServer, listenLocalhost, localServerOrigin } from "./helpers.js";
 
 const servers = [];
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  await Promise.all(
-    servers.splice(0).map(
-      (server) =>
-        new Promise((resolve) => {
-          server.close(resolve);
-        })
-    )
-  );
+  await Promise.all(servers.splice(0).map(closeServer));
 });
 
 describe("site inference", () => {
@@ -84,10 +78,7 @@ async function startSite(body, options = {}) {
     });
     response.end(body);
   });
-  await new Promise((resolve) => {
-    server.listen(0, "127.0.0.1", resolve);
-  });
+  await listenLocalhost(server);
   servers.push(server);
-  const address = server.address();
-  return { server, url: `http://127.0.0.1:${address.port}/`, hits: () => hits };
+  return { server, url: `${localServerOrigin(server)}/`, hits: () => hits };
 }

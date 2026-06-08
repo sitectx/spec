@@ -3,19 +3,12 @@ import http from "node:http";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { discoverSite, normalizeCrawlUrl } from "../src/core/discover.js";
-import { makeTempRoot, readJson, runCli, runCliAsync } from "./helpers.js";
+import { closeServer, listenLocalhost, localServerOrigin, makeTempRoot, readJson, runCli, runCliAsync } from "./helpers.js";
 
 const servers = [];
 
 afterEach(async () => {
-  await Promise.all(
-    servers.splice(0).map(
-      (server) =>
-        new Promise((resolve) => {
-          server.close(resolve);
-        })
-    )
-  );
+  await Promise.all(servers.splice(0).map(closeServer));
 });
 
 describe("discover", () => {
@@ -234,12 +227,9 @@ describe("discover", () => {
       response.writeHead(200, { "content-type": "text/html" });
       response.end(html("Escaped", "<h1>Escaped</h1>"));
     });
-    await new Promise((resolve) => {
-      redirectedServer.listen(0, "127.0.0.1", resolve);
-    });
+    await listenLocalhost(redirectedServer);
     servers.push(redirectedServer);
-    const redirectedAddress = redirectedServer.address();
-    const redirectedUrl = `http://127.0.0.1:${redirectedAddress.port}/secret`;
+    const redirectedUrl = `${localServerOrigin(redirectedServer)}/secret`;
     const { url } = await startSite({
       "/": html("Home", '<h1>Home</h1><a href="/redirect">Redirect</a>'),
       "/redirect": { status: 302, headers: { location: redirectedUrl }, body: "" }
@@ -878,12 +868,9 @@ async function startSite(routes) {
     });
     response.end((normalized.body || "").replaceAll("__BASE__", baseUrl.replace(/\/$/, "")));
   });
-  await new Promise((resolve) => {
-    server.listen(0, "127.0.0.1", resolve);
-  });
+  await listenLocalhost(server);
   servers.push(server);
-  const address = server.address();
-  baseUrl = `http://127.0.0.1:${address.port}/`;
+  baseUrl = `${localServerOrigin(server)}/`;
   return { server, url: baseUrl };
 }
 

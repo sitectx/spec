@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { makeTempRoot, readJson, runCli, runCliAsync } from "./helpers.js";
+import { closeServer, listenLocalhost, localServerOrigin, makeTempRoot, readJson, runCli, runCliAsync } from "./helpers.js";
 
 describe("doctor local", () => {
   it("doctor --root passes on generated artifacts", async () => {
@@ -114,13 +114,12 @@ async function startStaticSite(root) {
       response.end("not found");
     }
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  const origin = `http://127.0.0.1:${address.port}`;
+  await listenLocalhost(server);
+  const origin = localServerOrigin(server);
   return {
     origin,
     url: `${origin}/`,
     hits: () => hits,
-    close: () => new Promise((resolve) => server.close(resolve))
+    close: () => closeServer(server)
   };
 }
