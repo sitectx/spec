@@ -216,15 +216,17 @@ export function addSponsoredContextChecks(collector, target, document, options =
 
 export function addCommercialConfigChecks(collector, target, config, options = {}) {
   const commercialContext = commercialContextConfig(config);
-  const outputPath = normalizeOutputPath(commercialContext.outputPath);
-  if (outputPath.startsWith(SITEMAP_CONFLICT_PREFIX)) {
+  const outputPath = validateOutputPath(commercialContext.outputPath);
+  if (!outputPath.ok) {
+    collector.fail("commercialContext.outputPath.invalid", target, outputPath.message);
+  } else if (outputPath.value.startsWith(SITEMAP_CONFLICT_PREFIX)) {
     collector.fail(
       "commercialContext.outputPath.conflict",
       target,
       "commercialContext.outputPath cannot be under .well-known/sitectx/ because /.well-known/sitectx is the manifest file."
     );
   } else {
-    collector.pass("commercialContext.outputPath", target, `Commercial context output path is ${outputPath}.`);
+    collector.pass("commercialContext.outputPath", target, `Commercial context output path is ${outputPath.value}.`);
   }
   if (!commercialContext.enabled) {
     collector.pass("commercialContext.enabled", target, "Commercial context is disabled.");
@@ -464,7 +466,29 @@ function urlFieldCheck(collector, target, value, code, passMessage) {
 
 function normalizeOutputPath(value) {
   const raw = typeof value === "string" && value.trim() ? value.trim() : DEFAULT_SPONSORED_CONTEXT_PATH;
-  return raw.replace(/^\/+/, "").replaceAll("\\", "/");
+  const normalized = raw.replaceAll("\\", "/");
+  if (pathIsAbsolute(raw) || pathIsAbsolute(normalized)) {
+    throw new Error("commercialContext.outputPath must be a relative public path.");
+  }
+  if (normalized.split("/").includes("..")) {
+    throw new Error("commercialContext.outputPath cannot contain .. path segments.");
+  }
+  return normalized;
+}
+
+function validateOutputPath(value) {
+  try {
+    return { ok: true, value: normalizeOutputPath(value) };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "commercialContext.outputPath is invalid."
+    };
+  }
+}
+
+function pathIsAbsolute(value) {
+  return /^[/\\]|^[A-Za-z]:/.test(value);
 }
 
 function requiredOption(value, optionName) {

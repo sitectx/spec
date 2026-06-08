@@ -64,6 +64,61 @@ describe("generate", () => {
     await expect(fs.stat(path.join(outRoot, "sitectx.json"))).resolves.toBeTruthy();
   });
 
+  it("rejects commercial context output paths that escape the output root", async () => {
+    const configRoot = await makeTempRoot();
+    const outParent = await makeTempRoot();
+    const outRoot = path.join(outParent, "public");
+    const escapedPath = path.join(outParent, "escaped-generate.json");
+    expect(runCli(["init", "--root", configRoot]).status).toBe(0);
+    const configPath = path.join(configRoot, "sitectx.config.json");
+    const config = await readJson(configPath);
+    config.commercialContext.outputPath = "../escaped-generate.json";
+    await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+
+    const result = runCli([
+      "generate",
+      "--root",
+      configRoot,
+      "--config",
+      "sitectx.config.json",
+      "--out",
+      outRoot,
+      "--force"
+    ]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("outputPath");
+    await expect(fs.stat(escapedPath)).rejects.toThrow();
+  });
+
+  it("rejects generated artifacts that would publish secrets from public config fields", async () => {
+    const configRoot = await makeTempRoot();
+    const outRoot = await makeTempRoot();
+    expect(runCli(["init", "--root", configRoot]).status).toBe(0);
+    const configPath = path.join(configRoot, "sitectx.config.json");
+    const config = await readJson(configPath);
+    config.description = "Public summary with sessionid=fake-session-value";
+    await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+
+    const result = runCli([
+      "generate",
+      "--root",
+      configRoot,
+      "--config",
+      "sitectx.config.json",
+      "--out",
+      outRoot,
+      "--force"
+    ]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Generated artifact");
+    expect(result.stderr).toContain("possible session cookie");
+    expect(result.stderr).toContain("sessioni****");
+    expect(result.stderr).not.toContain("fake-session-value");
+    await expect(fs.stat(path.join(outRoot, "sitectx.json"))).rejects.toThrow();
+  });
+
   it("generated artifacts have stable structure with ISO timestamps", async () => {
     const root = await makeTempRoot();
     expect(

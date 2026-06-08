@@ -3,7 +3,7 @@ import path from "node:path";
 import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { printCheckResult, writeError, writeJson, writeLine } from "../output.js";
-import { GENERATED_ARTIFACTS, buildInitFiles, toWritePlan } from "../../core/artifacts.js";
+import { GENERATED_ARTIFACTS, artifactSecretErrors, buildInitFiles, toWritePlan } from "../../core/artifacts.js";
 import { readExistingConfig, summarizeConfigChanges } from "../../core/change-detection.js";
 import { discoverSite } from "../../core/discover.js";
 import { artifactPaths, fileExists, removeFileIfExists, writeUtf8 } from "../../core/filesystem.js";
@@ -54,7 +54,7 @@ Behavior:
         return;
       }
       const result = await runInit(options);
-      program._sitectxExitCode = result.ok ? EXIT_SUCCESS : EXIT_RUNTIME_ERROR;
+      program._sitectxExitCode = result.exitCode ?? (result.ok ? EXIT_SUCCESS : EXIT_RUNTIME_ERROR);
     });
 }
 
@@ -299,6 +299,15 @@ export async function runInit(options) {
       sampleContent: options.sampleContent
     });
     config = initFiles.config;
+    const secretErrors = artifactSecretErrors(initFiles.files);
+    if (secretErrors.length > 0) {
+      const result = emptyResult(false, secretErrors);
+      result.exitCode = EXIT_VALIDATION_FAILED;
+      if (!options.silent) {
+        printInitResult(result, options);
+      }
+      return result;
+    }
     plan = initWritePlan(layout, initFiles.files);
   } catch (error) {
     const result = emptyResult(false, [error.message]);

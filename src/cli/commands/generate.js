@@ -2,7 +2,7 @@ import path from "node:path";
 import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { writeError, writeJson, writeLine } from "../output.js";
-import { buildArtifacts, toWritePlan } from "../../core/artifacts.js";
+import { artifactSecretErrors, buildArtifacts, toWritePlan } from "../../core/artifacts.js";
 import { loadConfig } from "../../core/config.js";
 import { artifactPaths, fileExists, removeFileIfExists, resolveRoot, writeUtf8 } from "../../core/filesystem.js";
 
@@ -78,6 +78,16 @@ export async function runGenerate(options) {
       );
     }
     const artifacts = buildArtifacts(config);
+    const secretErrors = artifactSecretErrors(artifacts.files);
+    if (secretErrors.length > 0) {
+      result.ok = false;
+      result.exitCode = EXIT_VALIDATION_FAILED;
+      result.errors.push(...secretErrors);
+      if (!options.silent) {
+        printGenerateResult(result, options);
+      }
+      return result;
+    }
     const outRoot = path.resolve(root, options.out);
     if (options.force && !options.dryRun) {
       await removeLegacyUpdateArtifacts(outRoot, result);

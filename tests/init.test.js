@@ -1,13 +1,15 @@
 import fs from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { discoverForInit, runInit } from "../src/cli/commands/init.js";
+import { EXIT_VALIDATION_FAILED } from "../src/cli/exit-codes.js";
 import { makeTempRoot, readJson, runCli } from "./helpers.js";
 
 const servers = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     servers.splice(0).map(
       (server) =>
@@ -77,6 +79,48 @@ describe("init", () => {
     expect(manifest.summary).toBe("Example Site helps teams publish useful website context.");
     expect(manifest.records[0].summary).toBe("Example Site helps teams publish useful website context.");
     expect(config.sections).toHaveLength(2);
+  });
+
+  it("init rejects generated artifacts that would publish secrets", async () => {
+    const root = await makeTempRoot();
+    const cliRoot = await makeTempRoot();
+
+    const result = await runInit({
+      root,
+      siteUrl: "https://example.com",
+      name: "Example Site",
+      description: "Public description accidentally includes sessionid=fake-session-value",
+      silent: true
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.exitCode).toBe(EXIT_VALIDATION_FAILED);
+    expect(result.errors.join("\n")).toContain("Generated artifact");
+    expect(result.errors.join("\n")).toContain("possible session cookie");
+    expect(result.errors.join("\n")).toContain("sessioni****");
+    expect(result.errors.join("\n")).not.toContain("fake-session-value");
+    for (const file of generatedFiles) {
+      await expect(fs.stat(path.join(root, file))).rejects.toThrow();
+    }
+
+    const cliResult = runCli([
+      "init",
+      "--root",
+      cliRoot,
+      "--site-url",
+      "https://example.com",
+      "--name",
+      "Example Site",
+      "--description",
+      "Public description accidentally includes sessionid=fake-session-value"
+    ]);
+
+    expect(cliResult.status).toBe(EXIT_VALIDATION_FAILED);
+    expect(cliResult.stderr).toContain("Generated artifact");
+    expect(cliResult.stderr).not.toContain("fake-session-value");
+    for (const file of generatedFiles) {
+      await expect(fs.stat(path.join(cliRoot, file))).rejects.toThrow();
+    }
   });
 
   it("init with full flags stays non-interactive", async () => {
@@ -259,6 +303,20 @@ describe("init", () => {
     expect(discovered.config.sections.map((section) => section.id)).toEqual(["home", "donate"]);
     expect(discovered.config.actions[0]).toMatchObject({ type: "donate" });
     expect(discovered.config.catalogs).toEqual([]);
+  });
+
+  it("init discovery fallback does not fetch non-HTTPS public URLs", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("raw fetch should not be called"));
+
+    const discovered = await discoverForInit("http://example.com", {
+      name: "Example Fallback",
+      timeout: 100
+    });
+
+    expect(discovered.ok).toBe(false);
+    expect(discovered.warning).toContain("Discovery requires HTTPS for non-localhost URLs.");
+    expect(discovered.config.name).toBe("Example Fallback");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("init refuses overwrite without --force", async () => {

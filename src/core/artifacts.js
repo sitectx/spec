@@ -3,6 +3,7 @@ import { isCommercialContextEnabled, sponsoredContextOutputPath } from "./commer
 import { safeJsonStringify } from "./json-hygiene.js";
 import { stringifyNdjson } from "./ndjson.js";
 import { artifactPaths, displayPath } from "./filesystem.js";
+import { scanForSecrets } from "./secrets.js";
 import { createContext } from "../templates/context.js";
 import { createCatalogs } from "../templates/catalogs.js";
 import { createDefaultConfig } from "../templates/default-config.js";
@@ -104,9 +105,49 @@ export function buildInitFiles(options = {}) {
 
 export function toWritePlan(root, files) {
   const paths = artifactPaths(root);
-  return files.map((file) => ({
-    ...file,
-    absolutePath: path.join(paths.root, file.relativePath),
-    displayPath: displayPath(paths.root, path.join(paths.root, file.relativePath))
-  }));
+  return files.map((file) => {
+    const absolutePath = resolveArtifactPath(paths.root, file.relativePath);
+    return {
+      ...file,
+      absolutePath,
+      displayPath: displayPath(paths.root, absolutePath)
+    };
+  });
+}
+
+export function artifactSecretErrors(files) {
+  return artifactSecretFindings(files).map(
+    (finding) =>
+      `Generated artifact ${finding.relativePath} contains possible ${finding.type} at ${finding.path}: ${finding.redacted}. Redact secrets before writing public artifacts.`
+  );
+}
+
+export function artifactSecretFindings(files) {
+  return files.flatMap((file) =>
+    scanForSecrets(file.data ?? file.content, { path: "$" }).map((finding) => ({
+      relativePath: file.relativePath,
+      ...finding
+    }))
+  );
+}
+
+function resolveArtifactPath(root, relativePath) {
+  if (typeof relativePath !== "string" || relativePath.trim().length === 0) {
+    throw new Error("Artifact relativePath must be a non-empty relative path.");
+  }
+  if (path.isAbsolute(relativePath) || path.win32.isAbsolute(relativePath)) {
+    throw new Error(`Artifact path must be relative: ${relativePath}`);
+  }
+  const normalizedRelativePath = relativePath.replaceAll("\\", "/");
+  if (normalizedRelativePath.split("/").includes("..")) {
+    throw new Error(`Artifact path cannot contain .. segments: ${relativePath}`);
+  }
+
+  const resolvedRoot = path.resolve(root);
+  const absolutePath = path.resolve(resolvedRoot, normalizedRelativePath);
+  const relativeFromRoot = path.relative(resolvedRoot, absolutePath);
+  if (relativeFromRoot.startsWith("..") || path.isAbsolute(relativeFromRoot)) {
+    throw new Error(`Artifact path escapes output root: ${relativePath}`);
+  }
+  return absolutePath;
 }
