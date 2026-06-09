@@ -1,14 +1,20 @@
 # SiteCTX
 
-SiteCTX is an npm CLI for publishing machine-readable website context.
+SiteCTX is a draft web specification and npm CLI for publishing
+machine-readable website context.
 
-It writes a small set of public JSON artifacts that automated systems can fetch
+The npm package is the reference publisher implementation for SiteCTX v0.1. It
+writes a small set of public JSON artifacts that automated systems can fetch
 predictably: a discovery manifest, a canonical context snapshot, update feeds,
 catalog pointers, user actions, navigation, and optional disclosed sponsored
 context.
 
 Use SiteCTX as a publishing tool. The website you publish does not need to
 install SiteCTX, import it at runtime, or ship `node_modules`.
+
+SiteCTX is designed for production static publishing: generate the artifacts
+locally or in CI, serve them from your existing site, validate before deploy, and
+run a deployed doctor check after release.
 
 ## Requirements
 
@@ -60,6 +66,31 @@ lock.
 
 The local `sitectx.config.json` is publisher source data. Do not serve it unless
 you intentionally want to expose it.
+
+## Production Flow
+
+Use `init` for first publication, then keep `sitectx.config.json` under normal
+source control and regenerate artifacts during release:
+
+```bash
+npx sitectx@latest init --root . --public-dir ./public
+npx sitectx@latest validate ./public --strict
+```
+
+After deploy, verify the public endpoint rather than only the local files:
+
+```bash
+npx sitectx@latest doctor https://example.com --strict
+npx sitectx@latest inspect https://example.com --json
+```
+
+For discovered configs, publish only after review:
+
+```bash
+npx sitectx@latest discover https://example.com --out sitectx.config.draft.json
+npx sitectx@latest review sitectx.config.draft.json --approve --out sitectx.config.json --force
+npx sitectx@latest generate sitectx.config.json ./public --force
+```
 
 ## Discovery Manifest
 
@@ -262,6 +293,8 @@ Useful references:
 - [discovery manifest schema](versions/v0.1/schema/manifest.schema.json)
 - [context snapshot schema](versions/v0.1/schema/context.schema.json)
 - [catalog schema](versions/v0.1/schema/catalogs.schema.json)
+- [evidence index schema](versions/v0.1/schema/evidence.schema.json)
+- [evidence record schema](versions/v0.1/schema/evidence-record.schema.json)
 - [update snapshot schema](versions/v0.1/schema/updates.schema.json)
 - [sponsored context schema](versions/v0.1/schema/sponsored-context.schema.json)
 - [examples](versions/v0.1/examples)

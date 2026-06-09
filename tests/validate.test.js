@@ -86,6 +86,33 @@ describe("validate", () => {
     expect(result.stdout).toContain("Manifest-linked file is missing: sitectx.json");
   });
 
+  it("validates manifest-linked evidence index against its schema", async () => {
+    const root = await makeTempRoot();
+    expect(runCli(["init", "--root", root]).status).toBe(0);
+    await fs.writeFile(
+      path.join(root, "sitectx", "evidence.json"),
+      JSON.stringify({ specVersion: "0.1", evidence: [] }, null, 2),
+      "utf8"
+    );
+    for (const manifestPath of [
+      path.join(root, ".well-known", "sitectx"),
+      path.join(root, ".well-known", "sitectx.json")
+    ]) {
+      const manifest = await readJson(manifestPath);
+      manifest.evidence = {
+        url: "/sitectx/evidence.json",
+        contentType: "application/json"
+      };
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+    }
+
+    const result = runCli(["validate", "--root", root]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("sitectx/evidence.json schema validation failed");
+    expect(result.stdout).toContain("must have required property 'kind'");
+  });
+
   it("manifest link validation rejects sponsored context paths outside the root before reading", async () => {
     const root = await makeTempRoot();
     const escapedName = `${path.basename(root)}-escaped-sponsored-context.json`;

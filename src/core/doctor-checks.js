@@ -173,7 +173,7 @@ export async function doctorRemote(options = {}) {
       timeout,
       maxBytes,
       fetchPolicy,
-      validator: null
+      validator: validators.evidence
     });
   }
 
