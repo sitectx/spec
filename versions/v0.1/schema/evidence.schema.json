@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sitectx.org/versions/v0.1/schema/evidence.schema.json",
+  "title": "SiteCTX v0.1 Evidence Index",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "kind",
+    "site",
+    "generatedAt",
+    "evidence"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "sitectx.evidence"
+    },
+    "site": {
+      "$ref": "#/$defs/site"
+    },
+    "generatedAt": {
+      "$ref": "#/$defs/dateTime"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceReference"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "site": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "evidenceReference": {
+      "type": "object",
+      "required": [
+        "id",
+        "url",
+        "sourceUrl",
+        "observedAt",
+        "summary"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "observedAt": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

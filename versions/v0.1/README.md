@@ -1,6 +1,8 @@
 # SiteCTX v0.1
 
-Status: draft.
+Status: v0.1 draft. The npm package is production-oriented for static artifact
+publishing, while the specification remains draft until broader implementer
+review.
 
 This README is the v0.1 implementer map. It explains the public artifacts,
 schema files, examples, and compatibility rules in this directory. Field-level
@@ -59,12 +61,40 @@ Optional linked resources include:
 | `/sitectx/updates.json` | `kind: "sitectx.updates"` | [updates.schema.json](schema/updates.schema.json) | JSON update snapshot. |
 | `/sitectx/updates.ndjson` | `kind: "sitectx.update"` per line | [update.schema.json](schema/update.schema.json) | Append-friendly update stream. |
 | `/sitectx/sponsored-context.json` | `kind: "sitectx.sponsoredContext"` | [sponsored-context.schema.json](schema/sponsored-context.schema.json) | Optional disclosed sponsored commercial placements. |
+| `/sitectx/evidence.json` | `kind: "sitectx.evidence"` | [evidence.schema.json](schema/evidence.schema.json) | Optional public evidence index. |
+| `/sitectx/evidence/{id}.json` | `kind: "sitectx.evidenceRecord"` | [evidence-record.schema.json](schema/evidence-record.schema.json) | Optional individual public evidence record. |
 | `sitectx.config.json` | CLI source config | [config.schema.json](schema/config.schema.json) | Local publisher config; not a public artifact. |
 
-The repo also includes [sitectx.schema.json](schema/sitectx.schema.json), the
-broader draft context model used by the hand-written v0.1 examples and Python
-validator. For generated CLI output, validate each artifact against its matching
-artifact schema above.
+The repo also includes [sitectx.schema.json](schema/sitectx.schema.json), a
+broader draft context model for standalone context examples. For generated CLI
+output, validate each artifact against its matching artifact schema above.
+
+## Reference CLI Output
+
+The npm package is the reference publisher implementation for this v0.1 draft.
+It generates the artifact set above from `sitectx.config.json` and validates each
+public JSON file against its artifact schema.
+
+Common production flow:
+
+```bash
+npx sitectx@latest init --root . --public-dir ./public
+npx sitectx@latest validate ./public --strict
+npx sitectx@latest doctor https://example.com --strict
+```
+
+Discovery-assisted flow:
+
+```bash
+npx sitectx@latest discover https://example.com --out sitectx.config.draft.json
+npx sitectx@latest review sitectx.config.draft.json --approve --out sitectx.config.json --force
+npx sitectx@latest generate sitectx.config.json ./public --force
+```
+
+Generated discovery manifests use `specVersion` with
+`kind: "sitectx.manifest"`. Generated context snapshots use
+`kind: "sitectx.context"` and retain `sitectx_version: "0.1"` for v0.1 context
+compatibility.
 
 ## Discovery Manifest Shape
 
@@ -278,11 +308,15 @@ Consumers should:
 - [schema/context.schema.json](schema/context.schema.json): generated context
   snapshot.
 - [schema/sitectx.schema.json](schema/sitectx.schema.json): broader draft
-  context model used by hand-written examples.
+  context model for standalone context examples.
 - [schema/config.schema.json](schema/config.schema.json): local CLI source
   config.
 - [schema/catalogs.schema.json](schema/catalogs.schema.json): catalog pointer
   index.
+- [schema/evidence.schema.json](schema/evidence.schema.json): public evidence
+  index.
+- [schema/evidence-record.schema.json](schema/evidence-record.schema.json):
+  individual public evidence record.
 - [schema/updates.schema.json](schema/updates.schema.json): JSON update
   snapshot.
 - [schema/update.schema.json](schema/update.schema.json): individual update
@@ -292,10 +326,12 @@ Consumers should:
 
 ## Examples
 
+- [examples/manifest.json](examples/manifest.json): discovery manifest example.
 - [examples/minimal.sitectx.json](examples/minimal.sitectx.json): smallest useful
-  broader context example.
+  context snapshot example.
 - [examples/standard.sitectx.json](examples/standard.sitectx.json): broader
-  context example with pages, entities, offers, updates, resources, and feeds.
+  context snapshot example with pages, entities, offers, updates, resources, and
+  feeds.
 - [examples/catalogs.json](examples/catalogs.json): catalog pointer index.
 - [examples/updates.json](examples/updates.json): update snapshot example.
 - [examples/updates.ndjson](examples/updates.ndjson): line-delimited update

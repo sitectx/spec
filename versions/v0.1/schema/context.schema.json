@@ -4,7 +4,9 @@
   "title": "SiteCTX v0.1 Context Snapshot",
   "type": "object",
   "required": [
+    "specVersion",
     "sitectx_version",
+    "kind",
     "site",
     "freshness",
     "records"

@@ -37,8 +37,10 @@ The `versions/` directory contains published drafts. Changes within `v0.1`
 should remain compatible with the v0.1 version identifier unless the repository
 explicitly starts a new version directory.
 
-The top-level `sitectx_version` value is part of the wire format. Consumers use
-it to choose parsing and conformance behavior.
+The top-level version marker is part of the wire format. Discovery manifests use
+`specVersion` with `kind: "sitectx.manifest"`. Context snapshots also carry
+`sitectx_version` for v0.1 compatibility. Consumers use these markers to choose
+parsing and conformance behavior.
 
 ## Scope Control
 

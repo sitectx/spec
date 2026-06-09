@@ -1,5 +1,8 @@
 export function createUpdates(config, generatedAt) {
   const updates = config.updates.map((update) => ({
+    specVersion: "0.1",
+    kind: "sitectx.update",
+    siteUrl: config.siteUrl,
     id: update.id,
     type: update.type,
     url: update.url,

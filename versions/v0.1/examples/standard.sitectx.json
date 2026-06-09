@@ -1,5 +1,7 @@
 {
+  "specVersion": "0.1",
   "sitectx_version": "0.1",
+  "kind": "sitectx.context",
   "site": {
     "url": "https://www.rivertonbikes.example/",
     "name": "Riverton Bikes",
@@ -15,6 +17,7 @@
     "expires_at": "2026-06-01T16:30:00Z",
     "next_update_at": "2026-06-01T10:00:00Z"
   },
+  "generatedAt": "2026-05-31T16:30:00Z",
   "identity": {
     "name": "Riverton Bikes",
     "url": "https://www.rivertonbikes.example/",
@@ -25,7 +28,8 @@
     "sourceUrl": "https://www.rivertonbikes.example/"
   },
   "resources": {
-    "self": "https://www.rivertonbikes.example/.well-known/sitectx",
+    "manifest": "https://www.rivertonbikes.example/.well-known/sitectx",
+    "self": "https://www.rivertonbikes.example/sitectx.json",
     "catalogs": "https://www.rivertonbikes.example/sitectx/catalogs.json",
     "updates": "https://www.rivertonbikes.example/sitectx/updates.ndjson",
     "updates_json": "https://www.rivertonbikes.example/sitectx/updates.json",

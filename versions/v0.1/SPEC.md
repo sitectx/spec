@@ -148,48 +148,90 @@ signals for those questions.
 
 ## 5. Manifest Format
 
-A SiteCTX v0.1 manifest MUST be a JSON object.
+A SiteCTX v0.1 discovery manifest MUST be a JSON object.
 
-The manifest MUST include these top-level fields:
+The discovery manifest MUST include these top-level fields:
 
-- `sitectx_version`
+- `specVersion`
+- `kind`
 - `site`
-- `freshness`
-- `records`
+- `generatedAt`
+- `context`
 
-The `sitectx_version` field MUST be the string `"0.1"`.
+The `specVersion` field MUST be the string `"0.1"`.
+
+The `kind` field MUST be the string `"sitectx.manifest"`.
 
 Unknown top-level fields MUST be tolerated by consumers. Publishers SHOULD use
 namespaced extension keys where practical, such as `x_example_field` or a
 DNS-style namespace key such as `com.example.inventory`.
 
-The manifest MAY link to additional resources by using the `resources` object,
-the `feeds` array, record-level URLs, or extension fields.
+The discovery manifest MAY include compact preview fields such as `summary`,
+`freshness`, `records`, `actions`, `catalogs`, `updates`, `updatesNdjson`,
+`evidence`, and `commercialContext`.
+
+The discovery manifest MAY link to additional resources by using top-level link
+objects, the `resources` object, the `feeds` array, record-level URLs, or
+extension fields.
+
+The `/sitectx.json` context snapshot is not a discovery manifest alias. When a
+publisher provides a context snapshot, it MUST be a JSON object and MUST include
+these top-level fields:
+
+- `specVersion`
+- `sitectx_version`
+- `kind`
+- `site`
+- `freshness`
+- `records`
+
+For the v0.1 context snapshot, `specVersion` and `sitectx_version` MUST both be
+the string `"0.1"`, and `kind` MUST be the string `"sitectx.context"`.
 
 ### 5.1 Top-Level Fields
 
+`specVersion`:
+: REQUIRED string on generated SiteCTX artifacts. For this specification it MUST
+  be `"0.1"`.
+
+`kind`:
+: REQUIRED string on generated SiteCTX artifacts. For the discovery manifest it
+  MUST be `"sitectx.manifest"`. For the context snapshot it MUST be
+  `"sitectx.context"`.
+
 `sitectx_version`:
-: REQUIRED string. For this specification it MUST be `"0.1"`.
+: REQUIRED string on the context snapshot. For this specification it MUST be
+  `"0.1"`. Discovery manifests use `specVersion` and `kind` instead.
 
 `site`:
-: REQUIRED object. Describes the website publishing the manifest. It SHOULD
+: REQUIRED object. Describes the website publishing the artifact. It SHOULD
   include `url` and MAY include `name`, `description`, `language`, `same_as`, or
   other descriptive fields.
 
+`generatedAt`:
+: REQUIRED string on the discovery manifest and generated linked resources.
+  Date and time when the artifact was generated.
+
+`context`:
+: REQUIRED object on the discovery manifest. Link object pointing to the
+  canonical context snapshot, conventionally `/sitectx.json`.
+
 `freshness`:
-: REQUIRED object. Describes manifest freshness. See Section 6.
+: REQUIRED object on the context snapshot and OPTIONAL object on the discovery
+  manifest. Describes freshness. See Section 6.
 
 `records`:
-: REQUIRED array. Contains zero or more record objects. See Section 7.
+: REQUIRED array on the context snapshot and OPTIONAL preview array on the
+  discovery manifest. Contains zero or more record objects. See Section 7.
 
 `actions`:
 : OPTIONAL array. Contains zero or more action objects that identify important
   user intents and the URLs where those intents can be completed.
 
 `catalogs`:
-: OPTIONAL object or array. In the generated CLI manifest this is a link object
-  pointing to `/sitectx/catalogs.json`. In context snapshots or legacy manifests,
-  publishers MAY include catalog pointer objects directly.
+: OPTIONAL object or array. In the generated discovery manifest this is a link
+  object pointing to `/sitectx/catalogs.json`. In context snapshots, publishers
+  MAY include catalog pointer objects directly.
 
 `commercialContext`:
 : OPTIONAL object. Links to a disclosed sponsored context resource and describes
@@ -222,15 +264,19 @@ the `feeds` array, record-level URLs, or extension fields.
 
 `license`:
 : OPTIONAL string or object. Describes terms that the publisher wants to
-  associate with the SiteCTX manifest itself. It does not override the terms,
+  associate with the SiteCTX artifact. It does not override the terms,
   permissions, or restrictions of linked website content.
 
 ## 6. Freshness
 
-The `freshness` object MUST include:
+The context snapshot `freshness` object MUST include:
 
 - `status`
 - `generated_at`
+
+When the discovery manifest includes a `freshness` preview object, it MUST
+include `status` and MAY omit `generated_at` because the manifest already has a
+top-level `generatedAt` field.
 
 The `status` value MUST be one of:
 
@@ -248,17 +294,17 @@ strings.
 Freshness status meanings are:
 
 `fresh`:
-: The publisher believes the manifest reflects current site context.
+: The publisher believes the artifact reflects current site context.
 
 `stale`:
-: The publisher knows or suspects the manifest is older than intended, but it may
+: The publisher knows or suspects the artifact is older than intended, but it may
   still be useful.
 
 `unknown`:
 : The publisher cannot determine whether the manifest is current.
 
 `error`:
-: The publisher encountered an error generating or validating the manifest.
+: The publisher encountered an error generating or validating the artifact.
   Consumers MAY still inspect records but SHOULD treat freshness-sensitive values
   with caution.
 
@@ -375,18 +421,21 @@ Update records are also suitable for NDJSON update feeds.
 
 ## 8. Linked Resources
 
-The manifest MAY link to additional SiteCTX resources. Linked resources are
-optional. A publisher can conform to v0.1 by publishing only the required
-manifest fields.
+The discovery manifest MAY link to additional SiteCTX resources using top-level
+link objects such as `context`, `catalogs`, `updates`, `updatesNdjson`,
+`evidence`, and `commercialContext`. Linked resources other than the context
+snapshot are optional. A publisher can conform to v0.1 by publishing only the
+required discovery manifest fields.
 
 ### 8.1 Resources Object
 
-The optional top-level `resources` object provides well-known links to related
-SiteCTX resources. Known fields are:
+The optional top-level `resources` object on the context snapshot provides
+well-known links to related SiteCTX resources. Known fields are:
 
 | Field | Description |
 | --- | --- |
-| `self` | URL of the manifest. |
+| `manifest` | URL of the discovery manifest. |
+| `self` | URL of the context snapshot. |
 | `catalogs` | Optional catalog pointer index URL. |
 | `sponsoredContext` | Optional sponsored context resource URL. |
 | `updates` | Preferred NDJSON update feed URL. |
@@ -398,7 +447,8 @@ For example:
 ```json
 {
   "resources": {
-    "self": "https://example.com/.well-known/sitectx",
+    "manifest": "https://example.com/.well-known/sitectx",
+    "self": "https://example.com/sitectx.json",
     "catalogs": "https://example.com/sitectx/catalogs.json",
     "sponsoredContext": "https://example.com/sitectx/sponsored-context.json",
     "updates": "https://example.com/sitectx/updates.ndjson",
@@ -416,7 +466,7 @@ available.
 
 The optional `/sitectx/catalogs.json` resource is a JSON object containing a
 `catalogs` array. Catalog entries identify dynamic collection surfaces without
-requiring the SiteCTX manifest to contain every item.
+requiring the discovery manifest or context snapshot to contain every item.
 
 Catalog entries SHOULD include:
 
@@ -548,24 +598,60 @@ Extensions MUST NOT change the meaning of required v0.1 fields.
 
 ## 12. JSON Schema
 
-The non-exclusive JSON Schema for the SiteCTX v0.1 manifest is published at:
+The non-exclusive JSON Schema for the SiteCTX v0.1 discovery manifest is
+published at:
 
 ```text
-versions/v0.1/schema/sitectx.schema.json
+versions/v0.1/schema/manifest.schema.json
+```
+
+The non-exclusive JSON Schema for the SiteCTX v0.1 context snapshot is published
+at:
+
+```text
+versions/v0.1/schema/context.schema.json
 ```
 
 Additional linked-resource schemas include:
 
 ```text
 versions/v0.1/schema/catalogs.schema.json
+versions/v0.1/schema/evidence.schema.json
+versions/v0.1/schema/evidence-record.schema.json
 versions/v0.1/schema/sponsored-context.schema.json
 versions/v0.1/schema/updates.schema.json
+versions/v0.1/schema/update.schema.json
 ```
 
 The schemas are intended to catch common structural errors. The normative text
 in this document defines the specification.
 
-## 13. Security and Privacy
+## 13. Reference npm CLI Profile
+
+This section is non-normative.
+
+The `sitectx` npm package is the reference publisher implementation for this
+v0.1 draft. It generates static JSON artifacts from `sitectx.config.json` and
+validates generated output against the artifact schemas in Section 12.
+
+The reference CLI publishes:
+
+| Path | Generated kind |
+| --- | --- |
+| `/.well-known/sitectx` | `sitectx.manifest` |
+| `/.well-known/sitectx.json` | `sitectx.manifest` |
+| `/sitectx.json` | `sitectx.context` |
+| `/sitectx/catalogs.json` | `sitectx.catalogs` |
+| `/sitectx/updates.json` | `sitectx.updates` |
+| `/sitectx/updates.ndjson` | `sitectx.update` per line |
+| `/sitectx/sponsored-context.json` | `sitectx.sponsoredContext` when enabled |
+
+The reference CLI also provides bounded same-origin discovery, review-required
+draft configs, local validation, deployed endpoint checks, and inspection
+commands. Implementations MAY publish compatible SiteCTX artifacts without using
+the npm package.
+
+## 14. Security and Privacy
 
 Publishers and consumers SHOULD review
 [security-and-privacy.md](security-and-privacy.md). SiteCTX may expose fresh

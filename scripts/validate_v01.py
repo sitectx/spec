@@ -23,16 +23,32 @@ except ImportError as exc:  # pragma: no cover - exercised only without dev deps
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = ROOT / "versions/v0.1/schema/sitectx.schema.json"
+SCHEMA_DIR = ROOT / "versions/v0.1/schema"
+SCHEMA_PATHS = {
+    "manifest": SCHEMA_DIR / "manifest.schema.json",
+    "context": SCHEMA_DIR / "context.schema.json",
+    "sitectx": SCHEMA_DIR / "sitectx.schema.json",
+    "catalogs": SCHEMA_DIR / "catalogs.schema.json",
+    "evidence": SCHEMA_DIR / "evidence.schema.json",
+    "evidenceRecord": SCHEMA_DIR / "evidence-record.schema.json",
+    "updates": SCHEMA_DIR / "updates.schema.json",
+    "update": SCHEMA_DIR / "update.schema.json",
+    "sponsoredContext": SCHEMA_DIR / "sponsored-context.schema.json",
+}
 MANIFEST_EXAMPLES = [
+    ROOT / "versions/v0.1/examples/manifest.json",
+]
+CONTEXT_EXAMPLES = [
     ROOT / "versions/v0.1/examples/minimal.sitectx.json",
     ROOT / "versions/v0.1/examples/standard.sitectx.json",
 ]
 PAGE_RECORD_EXAMPLE = ROOT / "versions/v0.1/examples/page-record.json"
+CATALOGS_JSON = ROOT / "versions/v0.1/examples/catalogs.json"
 UPDATES_NDJSON = ROOT / "versions/v0.1/examples/updates.ndjson"
 UPDATES_JSON = ROOT / "versions/v0.1/examples/updates.json"
 EVIDENCE_INDEX_JSON = ROOT / "versions/v0.1/examples/evidence.json"
 EVIDENCE_RECORD_JSON = ROOT / "versions/v0.1/examples/evidence-record.json"
+SPONSORED_CONTEXT_JSON = ROOT / "versions/v0.1/examples/sponsored-context.json"
 
 
 def display_path(path: Path) -> str:
@@ -45,6 +61,16 @@ def load_json(path: Path) -> Any:
             return json.load(handle)
     except JSONDecodeError as exc:
         raise RuntimeError(f"{display_path(path)}: invalid JSON: {exc}") from exc
+
+
+def load_schemas() -> dict[str, dict[str, Any]]:
+    schemas: dict[str, dict[str, Any]] = {}
+    for name, path in SCHEMA_PATHS.items():
+        try:
+            schemas[name] = load_json(path)
+        except RuntimeError as exc:
+            raise RuntimeError(f"schema {name}: {exc}") from exc
+    return schemas
 
 
 def format_error(error: ValidationError) -> str:
@@ -72,15 +98,23 @@ def collect_errors(
     return sorted(validator.iter_errors(instance), key=lambda err: list(err.path))
 
 
-def validate_schema(schema: dict[str, Any]) -> bool:
+def validate_schema(name: str, path: Path, schema: dict[str, Any]) -> bool:
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as exc:
-        print("FAIL schema is not a valid JSON Schema")
+        print(f"FAIL {name} schema is not a valid JSON Schema")
         print(f"  - {exc.message}")
         return False
-    print(f"PASS schema syntax: {display_path(SCHEMA_PATH)}")
+    print(f"PASS schema syntax: {display_path(path)}")
     return True
+
+
+def inline_update_schema(
+    updates_schema: dict[str, Any], update_schema: dict[str, Any]
+) -> dict[str, Any]:
+    schema = json.loads(json.dumps(updates_schema))
+    schema["properties"]["updates"]["items"] = update_schema
+    return schema
 
 
 def validate_json_file(
@@ -100,16 +134,6 @@ def validate_json_file(
 
     print(f"PASS {label}: {display_path(path)}")
     return True
-
-
-def require_fields(
-    instance: dict[str, Any], fields: list[str], prefix: str = "$"
-) -> list[str]:
-    return [
-        f"{prefix}: missing required field {field!r}"
-        for field in fields
-        if field not in instance
-    ]
 
 
 def validate_updates_feed(path: Path, validator: Draft202012Validator) -> bool:
@@ -165,176 +189,112 @@ def validate_updates_snapshot(path: Path, validator: Draft202012Validator) -> bo
         print(f"  - {exc}")
         return False
 
-    errors: list[str] = []
     if not isinstance(instance, dict):
-        errors.append("$: expected JSON object")
-        print_basic_errors("updates snapshot", path, errors)
+        print_basic_errors("updates snapshot", path, ["$: expected JSON object"])
         return False
 
-    errors.extend(
-        require_fields(instance, ["sitectx_version", "site", "generated_at", "updates"])
-    )
-    if instance.get("sitectx_version") != "0.1":
-        errors.append("$['sitectx_version']: expected '0.1'")
+    schema_errors = collect_errors(validator, instance)
+    if schema_errors:
+        print_errors(f"updates snapshot: {display_path(path)}", schema_errors)
+        return False
 
     updates = instance.get("updates")
     if not isinstance(updates, list):
-        errors.append("$['updates']: expected array")
-    elif not updates:
-        errors.append("$['updates']: expected at least one update record")
-    else:
-        for index, record in enumerate(updates):
-            if not isinstance(record, dict):
-                errors.append(f"$['updates'][{index}]: expected object")
-                continue
-
-            record_errors = collect_errors(validator, record)
-            for error in record_errors:
-                errors.append(f"$['updates'][{index}]{format_error(error)[1:]}")
-
-            if record.get("type") != "update":
-                errors.append(f"$['updates'][{index}]['type']: expected 'update'")
-            if record.get("update_type") is None:
-                errors.append(
-                    f"$['updates'][{index}]: missing required field 'update_type'"
-                )
-            if not record.get("summary"):
-                errors.append(f"$['updates'][{index}]: missing required field 'summary'")
-
-    if errors:
-        print_basic_errors("updates snapshot", path, errors)
+        print_basic_errors("updates snapshot", path, ["$['updates']: expected array"])
+        return False
+    if not updates:
+        print_basic_errors(
+            "updates snapshot",
+            path,
+            ["$['updates']: expected at least one update record"],
+        )
         return False
 
     print(f"PASS updates snapshot: {display_path(path)} ({len(updates)} records)")
     return True
 
 
-def validate_evidence_index(path: Path) -> bool:
-    try:
-        instance = load_json(path)
-    except RuntimeError as exc:
-        print("FAIL evidence index")
-        print(f"  - {exc}")
-        return False
-
-    errors: list[str] = []
-    if not isinstance(instance, dict):
-        errors.append("$: expected JSON object")
-        print_basic_errors("evidence index", path, errors)
-        return False
-
-    errors.extend(
-        require_fields(instance, ["sitectx_version", "site", "generated_at", "evidence"])
-    )
-    if instance.get("sitectx_version") != "0.1":
-        errors.append("$['sitectx_version']: expected '0.1'")
-
-    evidence = instance.get("evidence")
-    if not isinstance(evidence, list):
-        errors.append("$['evidence']: expected array")
-    elif not evidence:
-        errors.append("$['evidence']: expected at least one evidence record reference")
-    else:
-        for index, item in enumerate(evidence):
-            if not isinstance(item, dict):
-                errors.append(f"$['evidence'][{index}]: expected object")
-                continue
-            errors.extend(
-                require_fields(
-                    item,
-                    ["id", "url", "source_url", "observed_at", "summary"],
-                    prefix=f"$['evidence'][{index}]",
-                )
-            )
-
-    if errors:
-        print_basic_errors("evidence index", path, errors)
-        return False
-
-    print(f"PASS evidence index: {display_path(path)} ({len(evidence)} records)")
-    return True
-
-
-def validate_evidence_record(path: Path) -> bool:
-    try:
-        instance = load_json(path)
-    except RuntimeError as exc:
-        print("FAIL evidence record")
-        print(f"  - {exc}")
-        return False
-
-    errors: list[str] = []
-    if not isinstance(instance, dict):
-        errors.append("$: expected JSON object")
-        print_basic_errors("evidence record", path, errors)
-        return False
-
-    errors.extend(
-        require_fields(
-            instance,
-            [
-                "sitectx_version",
-                "id",
-                "site",
-                "source_url",
-                "observed_at",
-                "content_type",
-                "summary",
-                "hash",
-                "related_record_ids",
-            ],
-        )
-    )
-    if instance.get("sitectx_version") != "0.1":
-        errors.append("$['sitectx_version']: expected '0.1'")
-
-    related_record_ids = instance.get("related_record_ids")
-    if not isinstance(related_record_ids, list):
-        errors.append("$['related_record_ids']: expected array")
-    elif not related_record_ids:
-        errors.append(
-            "$['related_record_ids']: expected at least one related record id"
-        )
-
-    if errors:
-        print_basic_errors("evidence record", path, errors)
-        return False
-
-    print(f"PASS evidence record: {display_path(path)}")
-    return True
-
-
 def main() -> int:
     try:
-        schema = load_json(SCHEMA_PATH)
+        schemas = load_schemas()
     except RuntimeError as exc:
         print("FAIL schema")
         print(f"  - {exc}")
         return 1
 
-    if not validate_schema(schema):
+    ok = True
+    for name, schema in schemas.items():
+        ok = validate_schema(name, SCHEMA_PATHS[name], schema) and ok
+    if not ok:
         return 1
 
-    manifest_validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    format_checker = FormatChecker()
+    manifest_validator = Draft202012Validator(
+        schemas["manifest"], format_checker=format_checker
+    )
+    context_validator = Draft202012Validator(
+        schemas["context"], format_checker=format_checker
+    )
+    sitectx_validator = Draft202012Validator(
+        schemas["sitectx"], format_checker=format_checker
+    )
+    catalogs_validator = Draft202012Validator(
+        schemas["catalogs"], format_checker=format_checker
+    )
+    evidence_validator = Draft202012Validator(
+        schemas["evidence"], format_checker=format_checker
+    )
+    evidence_record_validator = Draft202012Validator(
+        schemas["evidenceRecord"], format_checker=format_checker
+    )
+    update_validator = Draft202012Validator(
+        schemas["update"], format_checker=format_checker
+    )
+    updates_validator = Draft202012Validator(
+        inline_update_schema(schemas["updates"], schemas["update"]),
+        format_checker=format_checker,
+    )
+    sponsored_context_validator = Draft202012Validator(
+        schemas["sponsoredContext"], format_checker=format_checker
+    )
     record_schema = {
-        "$schema": schema.get("$schema"),
+        "$schema": schemas["context"].get("$schema"),
         "$id": "https://sitectx.org/versions/v0.1/schema/sitectx-record.schema.json",
         "$ref": "#/$defs/record",
-        "$defs": schema["$defs"],
+        "$defs": schemas["context"]["$defs"],
     }
     record_validator = Draft202012Validator(
-        record_schema, format_checker=FormatChecker()
+        record_schema, format_checker=format_checker
     )
 
-    ok = True
     for path in MANIFEST_EXAMPLES:
         ok = validate_json_file(path, manifest_validator, "manifest") and ok
 
+    for path in CONTEXT_EXAMPLES:
+        ok = validate_json_file(path, context_validator, "context") and ok
+        ok = validate_json_file(path, sitectx_validator, "sitectx context") and ok
+
     ok = validate_json_file(PAGE_RECORD_EXAMPLE, record_validator, "record") and ok
-    ok = validate_updates_feed(UPDATES_NDJSON, record_validator) and ok
-    ok = validate_updates_snapshot(UPDATES_JSON, record_validator) and ok
-    ok = validate_evidence_index(EVIDENCE_INDEX_JSON) and ok
-    ok = validate_evidence_record(EVIDENCE_RECORD_JSON) and ok
+    ok = validate_json_file(CATALOGS_JSON, catalogs_validator, "catalogs") and ok
+    ok = validate_updates_feed(UPDATES_NDJSON, update_validator) and ok
+    ok = validate_updates_snapshot(UPDATES_JSON, updates_validator) and ok
+    ok = validate_json_file(EVIDENCE_INDEX_JSON, evidence_validator, "evidence") and ok
+    ok = (
+        validate_json_file(
+            EVIDENCE_RECORD_JSON,
+            evidence_record_validator,
+            "evidence record",
+        )
+        and ok
+    )
+    ok = (
+        validate_json_file(
+            SPONSORED_CONTEXT_JSON,
+            sponsored_context_validator,
+            "sponsored context",
+        )
+        and ok
+    )
 
     if ok:
         print("PASS SiteCTX v0.1 validation complete")
