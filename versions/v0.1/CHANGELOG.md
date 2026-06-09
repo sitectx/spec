@@ -7,8 +7,10 @@ Initial draft specification.
 - Defines discovery at `/.well-known/sitectx` with optional manifest alias
   `/.well-known/sitectx.json`.
 - Defines `/sitectx.json` as the conventional current context snapshot path.
-- Defines required top-level fields: `sitectx_version`, `site`, `freshness`, and
-  `records`.
+- Defines the discovery manifest with required top-level fields `specVersion`,
+  `kind`, `site`, `generatedAt`, and `context`.
+- Defines the context snapshot with required top-level fields `specVersion`,
+  `sitectx_version`, `kind`, `site`, `freshness`, and `records`.
 - Defines freshness statuses: `fresh`, `stale`, `unknown`, and `error`.
 - Defines v0.1 record types: `page`, `entity`, `offer`, and `update`.
 - Defines common record requirements, including `id`, `type`, `observed_at`, and

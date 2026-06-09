@@ -1,18 +1,26 @@
 {
-  "sitectx_version": "0.1",
-  "site": "https://example.com",
-  "generated_at": "2026-05-31T18:30:00Z",
+  "specVersion": "0.1",
+  "kind": "sitectx.updates",
+  "site": {
+    "name": "Example Site",
+    "url": "https://example.com/"
+  },
+  "generatedAt": "2026-05-31T18:30:00Z",
   "updates": [
     {
+      "specVersion": "0.1",
+      "kind": "sitectx.update",
+      "siteUrl": "https://example.com/",
       "id": "update:pricing:2026-05-31T18-25-00Z",
       "type": "update",
-      "update_type": "price_changed",
       "url": "https://example.com/pricing",
+      "title": "Starter Plan Price Updated",
       "summary": "Starter plan changed from $99/month to $129/month.",
+      "publishedAt": "2026-05-31T18:25:00Z",
+      "updateType": "price_changed",
       "before": "$99/month",
       "after": "$129/month",
-      "observed_at": "2026-05-31T18:25:00Z",
-      "evidence_url": "https://example.com/sitectx/evidence/pricing-2026-05-31T18-25-00Z.json"
+      "evidenceUrl": "https://example.com/sitectx/evidence/pricing-2026-05-31T18-25-00Z.json"
     }
   ]
 }

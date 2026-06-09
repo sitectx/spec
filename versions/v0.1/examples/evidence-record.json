@@ -1,14 +1,18 @@
 {
-  "sitectx_version": "0.1",
+  "specVersion": "0.1",
+  "kind": "sitectx.evidenceRecord",
   "id": "evidence:pricing:2026-05-31T18-25-00Z",
-  "site": "https://example.com",
-  "source_url": "https://example.com/pricing",
-  "observed_at": "2026-05-31T18:25:00Z",
-  "content_type": "text/html",
+  "site": {
+    "name": "Example Site",
+    "url": "https://example.com/"
+  },
+  "sourceUrl": "https://example.com/pricing",
+  "observedAt": "2026-05-31T18:25:00Z",
+  "contentType": "text/html",
   "summary": "Observed public pricing page snapshot metadata.",
   "hash": "sha256:example-placeholder-hash",
-  "hash_note": "Example placeholder hash; not a real digest.",
-  "related_record_ids": [
+  "hashNote": "Example placeholder hash; not a real digest.",
+  "relatedRecordIds": [
     "page:pricing",
     "offer:starter-plan",
     "update:pricing:2026-05-31T18-25-00Z"

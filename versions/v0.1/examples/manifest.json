@@ -1,33 +1,23 @@
 {
   "specVersion": "0.1",
-  "sitectx_version": "0.1",
-  "kind": "sitectx.context",
+  "kind": "sitectx.manifest",
   "site": {
-    "url": "https://example.com/",
     "name": "Example Site",
+    "url": "https://example.com/",
     "description": "Example Site publishes concise product information and company updates.",
     "language": "en"
   },
   "summary": "Example Site publishes concise product information and company updates.",
-  "identity": {
-    "name": "Example Site",
-    "url": "https://example.com/",
-    "description": "Example Site publishes concise product information and company updates.",
-    "sourceUrl": "https://example.com/"
-  },
   "freshness": {
-    "status": "fresh",
-    "generated_at": "2026-05-31T14:00:00Z"
+    "status": "fresh"
   },
-  "generatedAt": "2026-05-31T14:00:00Z",
   "records": [
     {
       "id": "page:home",
       "type": "page",
       "url": "https://example.com/",
-      "observed_at": "2026-05-31T13:58:00Z",
       "title": "Example Site",
-      "page_role": "home",
+      "role": "home",
       "summary": "Homepage and primary source for Example Site."
     }
   ],
@@ -41,5 +31,18 @@
       "sourceUrl": "https://example.com/",
       "sourceText": "Contact"
     }
-  ]
+  ],
+  "generatedAt": "2026-05-31T14:00:00Z",
+  "context": {
+    "url": "/sitectx.json",
+    "contentType": "application/json"
+  },
+  "updates": {
+    "url": "/sitectx/updates.json",
+    "contentType": "application/json"
+  },
+  "updatesNdjson": {
+    "url": "/sitectx/updates.ndjson",
+    "contentType": "application/x-ndjson"
+  }
 }

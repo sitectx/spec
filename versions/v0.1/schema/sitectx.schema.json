@@ -1,19 +1,29 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sitectx.org/versions/v0.1/schema/sitectx.schema.json",
-  "title": "SiteCTX v0.1 Manifest",
-  "description": "A SiteCTX v0.1 manifest for publishing structured, freshness-aware website context.",
+  "title": "SiteCTX v0.1 Context Model",
+  "description": "A SiteCTX v0.1 context payload for publishing structured, freshness-aware website context.",
   "type": "object",
   "required": [
+    "specVersion",
     "sitectx_version",
+    "kind",
     "site",
     "freshness",
     "records"
   ],
   "properties": {
+    "specVersion": {
+      "const": "0.1",
+      "description": "SiteCTX generated artifact version identifier."
+    },
     "sitectx_version": {
       "const": "0.1",
-      "description": "SiteCTX version identifier."
+      "description": "SiteCTX context compatibility version identifier."
+    },
+    "kind": {
+      "const": "sitectx.context",
+      "description": "SiteCTX context artifact kind."
     },
     "site": {
       "$ref": "#/$defs/site"

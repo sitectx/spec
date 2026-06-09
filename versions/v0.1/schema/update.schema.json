@@ -4,6 +4,8 @@
   "title": "SiteCTX v0.1 Update Record",
   "type": "object",
   "required": [
+    "specVersion",
+    "kind",
     "id",
     "type",
     "url",
@@ -15,9 +17,7 @@
       "const": "0.1"
     },
     "kind": {
-      "enum": [
-        "sitectx.update"
-      ]
+      "const": "sitectx.update"
     },
     "siteUrl": {
       "type": "string",
