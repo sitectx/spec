@@ -43,6 +43,8 @@ export async function getValidators() {
     updatesSchema,
     updateSchema,
     catalogsSchema,
+    evidenceSchema,
+    evidenceRecordSchema,
     sponsoredContextSchema,
     configSchema,
     sitectxSchema
@@ -52,6 +54,8 @@ export async function getValidators() {
     loadSchema("updates.schema.json"),
     loadSchema("update.schema.json"),
     loadSchema("catalogs.schema.json"),
+    loadSchema("evidence.schema.json"),
+    loadSchema("evidence-record.schema.json"),
     loadSchema("sponsored-context.schema.json"),
     loadSchema("config.schema.json"),
     loadSchema("sitectx.schema.json")
@@ -66,6 +70,8 @@ export async function getValidators() {
     updates: ajv.compile(updatesSchema),
     update: ajv.getSchema(updateSchema.$id),
     catalogs: ajv.compile(catalogsSchema),
+    evidence: ajv.compile(evidenceSchema),
+    evidenceRecord: ajv.compile(evidenceRecordSchema),
     sponsoredContext: ajv.compile(sponsoredContextSchema),
     config: ajv.compile(configSchema),
     sitectx: ajv.compile(sitectxSchema)

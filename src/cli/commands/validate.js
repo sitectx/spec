@@ -12,6 +12,7 @@ export function registerValidateCommand(program) {
     .option("--manifest <path>", "Path to discovery manifest.")
     .option("--context <path>", "Path to context snapshot.")
     .option("--catalogs <path>", "Path to catalog index.")
+    .option("--evidence <path>", "Path to evidence index.")
     .option("--sponsored-context <path>", "Path to sponsored context artifact.")
     .option("--updates <path>", "Path to JSON update feed.")
     .option("--ndjson <path>", "Path to NDJSON update feed.")

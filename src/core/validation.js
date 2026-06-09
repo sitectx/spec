@@ -52,7 +52,8 @@ export async function validateLocalArtifacts(options = {}) {
     catalogs: path.resolve(options.catalogs || defaults.catalogs),
     updates: path.resolve(options.updates || defaults.updates),
     ndjson: path.resolve(options.ndjson || defaults.ndjson),
-    sponsoredContext: path.resolve(options.sponsoredContext || defaults.sponsoredContext)
+    sponsoredContext: path.resolve(options.sponsoredContext || defaults.sponsoredContext),
+    evidence: path.resolve(options.evidence || defaults.evidence)
   };
   const collector = createCollector();
   const parsed = {};
@@ -163,6 +164,19 @@ export async function validateLocalArtifacts(options = {}) {
     key: "updates",
     validator: validators.updates
   });
+  if (parsed.manifest?.evidence?.url || (await fileExists(paths.evidence))) {
+    const evidencePath = parsed.manifest?.evidence?.url
+      ? resolvePublicPath(root, parsed.manifest.evidence.url) || paths.evidence
+      : paths.evidence;
+    paths.evidence = evidencePath;
+    parsed.evidence = await readJsonArtifact({
+      collector,
+      root,
+      filePath: evidencePath,
+      key: "evidence",
+      validator: validators.evidence
+    });
+  }
 
   const ndjsonTarget = displayPath(root, paths.ndjson);
   if (!(await fileExists(paths.ndjson))) {
@@ -229,6 +243,12 @@ export async function validateLocalArtifacts(options = {}) {
     validateUniqueField(collector, "updates.ids", updatesTarget, parsed.updates.updates, "id", "Update IDs are unique.");
     validateStringLengths(collector, updatesTarget, parsed.updates);
     addSecretChecks(collector, displayPath(root, paths.updates), parsed.updates);
+  }
+  if (parsed.evidence) {
+    const evidenceTarget = displayPath(root, paths.evidence);
+    validateUniqueField(collector, "evidence.ids", evidenceTarget, parsed.evidence.evidence, "id", "Evidence IDs are unique.");
+    validateStringLengths(collector, evidenceTarget, parsed.evidence);
+    addSecretChecks(collector, evidenceTarget, parsed.evidence);
   }
 
   return summarizeChecks(collector.checks, Boolean(options.strict));
