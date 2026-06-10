@@ -29,7 +29,7 @@
     "sitectx": "bin/sitectx.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "files": [
     "bin",

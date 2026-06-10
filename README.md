@@ -36,7 +36,7 @@ The output is static JSON that your existing site can serve from
 
 ## Requirements
 
-- Node.js 20 or newer.
+- Node.js 20.19 or newer.
 - A site root or public directory where static files can be written.
 
 ## Quick Start
