@@ -183,6 +183,10 @@ describe("init", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Detected a web app with ./public");
     expect(result.stdout).toContain("Using a localhost development URL");
+    expect(result.stdout).toContain("Next commands:");
+    expect(result.stdout).toContain("npx sitectx@latest validate ./public");
+    expect(result.stdout).toContain("npx sitectx@latest doctor ./public");
+    expect(result.stdout).toContain("npx sitectx@latest inspect ./public");
     await expect(fs.stat(path.join(root, "sitectx.config.json"))).resolves.toBeTruthy();
     for (const file of publicArtifactFiles) {
       await expect(fs.stat(path.join(root, "public", file))).resolves.toBeTruthy();

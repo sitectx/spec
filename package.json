@@ -26,7 +26,7 @@
   ],
   "type": "module",
   "bin": {
-    "sitectx": "./bin/sitectx.js"
+    "sitectx": "bin/sitectx.js"
   },
   "engines": {
     "node": ">=20"
