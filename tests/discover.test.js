@@ -68,6 +68,55 @@ describe("discover", () => {
     expect(draft.discoveryCandidates.claims[0].reviewRequired).toBe(true);
   });
 
+  it("reports missing sitemaps as info when crawl discovery succeeds", async () => {
+    const { url } = await startSite({
+      "/": html("Home", "<h1>Example</h1><p>Trusted service since 2020.</p>")
+    });
+    const root = await makeTempRoot();
+    const out = path.join(root, "draft.json");
+
+    const result = await runCliAsync(["discover", url, "--out", out, "--force", "--delay-ms", "0"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("INFO No sitemap found; continued with crawl discovery.");
+    expect(result.stdout).not.toContain("WARN Sitemap not found");
+    expect(result.stdout).toContain("Result: PASS");
+  });
+
+  it("fails without writing a successful draft when zero pages are fetched", async () => {
+    const { url } = await startSite({
+      "/": { status: 500, contentType: "text/html", body: "server error" }
+    });
+    const root = await makeTempRoot();
+    const out = path.join(root, "draft.json");
+
+    const result = await runCliAsync(["discover", url, "--out", out, "--force", "--delay-ms", "0"]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain("Pages fetched: 0");
+    expect(result.stdout).toContain("Result: FAIL - no pages were fetched");
+    expect(result.stdout).not.toContain("Result: PASS");
+    expect(result.stderr).toContain("ERROR No pages were fetched.");
+    await expect(fs.stat(out)).rejects.toThrow();
+  });
+
+  it("discover --json reports ok false when zero pages are fetched", async () => {
+    const { url } = await startSite({
+      "/": { status: 500, contentType: "text/html", body: "server error" }
+    });
+    const root = await makeTempRoot();
+    const out = path.join(root, "draft.json");
+
+    const result = await runCliAsync(["discover", url, "--out", out, "--json", "--force", "--delay-ms", "0"]);
+    const parsed = JSON.parse(result.stdout);
+
+    expect(result.status).not.toBe(0);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.summary.pagesFetched).toBe(0);
+    expect(parsed.errors).toEqual(["No pages were fetched."]);
+    await expect(fs.stat(out)).rejects.toThrow();
+  });
+
   it("discover not-a-url fails cleanly", async () => {
     const result = await runCliAsync(["discover", "not-a-url", "--delay-ms", "0"]);
 

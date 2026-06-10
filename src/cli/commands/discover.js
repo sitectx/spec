@@ -42,7 +42,7 @@ Examples:
 Behavior:
   Presets: auto, ecommerce, nonprofit, saas, local-business, docs.
   Writes sitectx.config.draft.json by default.
-  Run sitectx review sitectx.config.draft.json before generate.
+  Run npx sitectx@latest review sitectx.config.draft.json before generate.
 `)
     .action(async (url, options) => {
       const resolvedUrl = resolveDiscoverUrl(url, options.url);
@@ -60,14 +60,14 @@ function resolveDiscoverUrl(argumentUrl, optionUrl) {
   if (argumentUrl && optionUrl && argumentUrl !== optionUrl) {
     return {
       ok: false,
-      message: "Use either sitectx discover <url> or --url, not both."
+      message: "Use one URL only. Try: npx sitectx@latest discover https://example.com"
     };
   }
   const url = argumentUrl || optionUrl;
   if (!url) {
     return {
       ok: false,
-      message: "Website URL required. Try: sitectx discover https://example.com"
+      message: "Website URL required. Try: npx sitectx@latest discover https://example.com"
     };
   }
   return { ok: true, url };
@@ -77,6 +77,29 @@ export async function runDiscover(options) {
   try {
     const result = await discoverSite(options);
     const outPath = path.resolve(options.out);
+    const summary = {
+      pagesFetched: result.crawlManifest.pagesFetched,
+      pagesIncluded: result.crawlManifest.pagesIncluded,
+      pagesSkipped: result.crawlManifest.pagesSkipped,
+      warnings: result.warnings.length,
+      notices: result.notices?.length || 0
+    };
+    if (summary.pagesFetched === 0) {
+      const output = {
+        ok: false,
+        output: null,
+        workdir: result.workdir,
+        summary,
+        crawlManifest: options.verbose ? result.crawlManifest : undefined,
+        notices: result.notices || [],
+        warnings: result.warnings,
+        errors: ["No pages were fetched."]
+      };
+      if (!options.silent) {
+        printDiscoverResult(output, options);
+      }
+      return output;
+    }
     if (!options.dryRun) {
       await writeDiscoveryOutput(outPath, result.config, { force: Boolean(options.force) });
     }
@@ -84,14 +107,10 @@ export async function runDiscover(options) {
       ok: true,
       output: options.dryRun ? null : outPath,
       workdir: result.workdir,
-      summary: {
-        pagesFetched: result.crawlManifest.pagesFetched,
-        pagesIncluded: result.crawlManifest.pagesIncluded,
-        pagesSkipped: result.crawlManifest.pagesSkipped,
-        warnings: result.warnings.length
-      },
+      summary,
       config: result.config,
       crawlManifest: options.verbose ? result.crawlManifest : undefined,
+      notices: result.notices || [],
       warnings: result.warnings
     };
     if (!options.silent) {
@@ -101,6 +120,8 @@ export async function runDiscover(options) {
   } catch (error) {
     const result = {
       ok: false,
+      notices: [],
+      warnings: [],
       errors: [error instanceof Error ? error.message : "Discovery failed."]
     };
     if (!options.silent) {
@@ -121,14 +142,22 @@ function printDiscoverResult(result, options) {
   }
   writeLine("SiteCTX discover");
   writeLine();
+  if (result.summary) {
+    writeLine(`Pages fetched: ${result.summary.pagesFetched}`);
+    writeLine(`Pages included: ${result.summary.pagesIncluded}`);
+    writeLine(`Pages skipped: ${result.summary.pagesSkipped}`);
+  }
   if (result.ok) {
     writeLine(`Output: ${result.output || "dry-run"}`);
     if (result.workdir) {
       writeLine(`Corpus: ${result.workdir}`);
     }
-    writeLine(`Pages fetched: ${result.summary.pagesFetched}`);
-    writeLine(`Pages included: ${result.summary.pagesIncluded}`);
-    writeLine(`Pages skipped: ${result.summary.pagesSkipped}`);
+    if (result.notices.length > 0) {
+      writeLine();
+      for (const notice of result.notices) {
+        writeLine(`INFO ${notice}`);
+      }
+    }
     if (result.warnings.length > 0) {
       writeLine();
       for (const warning of result.warnings) {
@@ -136,11 +165,22 @@ function printDiscoverResult(result, options) {
       }
     }
     writeLine();
-    writeLine("Result: PASS");
+    writeLine(result.warnings.length > 0 ? "Result: PASS with warnings" : "Result: PASS");
     return;
+  }
+  if (result.notices?.length > 0) {
+    for (const notice of result.notices) {
+      writeLine(`INFO ${notice}`);
+    }
+  }
+  if (result.warnings?.length > 0) {
+    for (const warning of result.warnings) {
+      writeLine(`WARN ${warning}`);
+    }
   }
   for (const error of result.errors) {
     writeError(`ERROR ${error}`);
   }
-  writeLine("Result: FAIL");
+  const noPagesFetched = result.errors.some((error) => /No pages were fetched/i.test(error));
+  writeLine(noPagesFetched ? "Result: FAIL - no pages were fetched" : "Result: FAIL");
 }
