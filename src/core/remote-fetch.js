@@ -6,6 +6,10 @@ import { Readable } from "node:stream";
 
 const DEFAULT_MAX_REDIRECTS = 5;
 const DEFAULT_MAX_BYTES = 1_000_000;
+const DEFAULT_HEADERS = {
+  "user-agent": "SiteCTX/0.1 (+https://github.com/sitectx/spec)",
+  accept: "text/html,application/json,application/x-ndjson,text/plain,*/*;q=0.8"
+};
 const BLOCKED_IPV4_RANGES = [
   ["0.0.0.0", 8],
   ["10.0.0.0", 8],
@@ -166,7 +170,8 @@ export async function fetchValidatedResponse(url, { signal, policyCheck } = {}) 
   if (!policyCheck?.resolvedAddress) {
     return fetch(url, {
       signal,
-      redirect: "manual"
+      redirect: "manual",
+      headers: DEFAULT_HEADERS
     });
   }
   return fetchWithPinnedLookup(url, {
@@ -223,7 +228,7 @@ export async function validateRemoteFetchUrl(value, policy) {
   };
 }
 
-async function fetchWithPinnedLookup(url, { signal, address, family }) {
+export async function fetchWithPinnedLookup(url, { signal, address, family }) {
   const parsed = new URL(url);
   const client = parsed.protocol === "https:" ? https : http;
   const hostname = normalizeHostname(parsed.hostname);
@@ -233,6 +238,7 @@ async function fetchWithPinnedLookup(url, { signal, address, family }) {
     port: parsed.port || undefined,
     path: `${parsed.pathname}${parsed.search}`,
     method: "GET",
+    headers: DEFAULT_HEADERS,
     signal,
     lookup: pinnedLookup(address, family)
   };

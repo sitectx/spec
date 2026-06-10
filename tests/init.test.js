@@ -313,6 +313,14 @@ describe("init", () => {
     expect(discovered.ok).toBe(false);
     expect(discovered.warning).toContain("Discovery requires HTTPS for non-localhost URLs.");
     expect(discovered.config.name).toBe("Example Fallback");
+    expect(discovered.config.sections).toHaveLength(1);
+    expect(discovered.config.actions).toEqual([
+      expect.objectContaining({
+        id: "action:home",
+        type: "learn",
+        url: "http://example.com/"
+      })
+    ]);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -337,6 +345,11 @@ async function startSite(routes) {
     if (!route) {
       response.writeHead(404, { "content-type": "text/plain" });
       response.end("not found");
+      return;
+    }
+    if (typeof route === "object") {
+      response.writeHead(route.status || 200, { "content-type": route.contentType || "text/html" });
+      response.end(route.body || "");
       return;
     }
     response.writeHead(200, { "content-type": "text/html" });
