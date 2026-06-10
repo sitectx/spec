@@ -338,7 +338,7 @@ function addSecretChecks(collector, target, value) {
 }
 
 function addClaimChecks(collector, target, text) {
-  const findings = PROHIBITED_CLAIMS.filter((claim) => claim.pattern.test(text));
+  const findings = PROHIBITED_CLAIMS.filter((claim) => hasUnnegatedClaim(text, claim.pattern));
   if (findings.length === 0) {
     collector.pass("claims.scan", target, "No prohibited SiteCTX claims detected.");
     return;
@@ -350,6 +350,22 @@ function addClaimChecks(collector, target, text) {
       `SiteCTX must not be described as ${finding.label}.`
     );
   }
+}
+
+function hasUnnegatedClaim(text, pattern) {
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+  const matcher = new RegExp(pattern.source, flags);
+  for (const match of text.matchAll(matcher)) {
+    if (!isNegatedClaimMatch(text, match.index || 0)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isNegatedClaimMatch(text, matchIndex) {
+  const prefix = text.slice(Math.max(0, matchIndex - 48), matchIndex).toLowerCase();
+  return /(^|[^a-z])not\s+(?:(?:a|an|the)\s+)?$/.test(prefix);
 }
 
 function addCheckMethods(collector) {

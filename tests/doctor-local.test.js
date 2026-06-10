@@ -84,8 +84,11 @@ describe("doctor local", () => {
 
       const allowed = await runCliAsync(["doctor", site.url, "--allow-remote-origin", site.origin]);
 
+      expect(allowed.status).toBe(0);
       expect(allowed.stdout).toContain("Target origin was explicitly allowlisted");
       expect(allowed.stdout).toContain("/.well-known/sitectx is reachable");
+      expect(allowed.stdout).not.toContain("SiteCTX must not be described as model training license");
+      expect(allowed.stdout).not.toContain("SiteCTX must not be described as ranking guarantee");
       expect(site.hits()).toBeGreaterThan(0);
     } finally {
       await site.close();
@@ -110,6 +113,29 @@ describe("doctor local", () => {
     } finally {
       await site.close();
       await blockedArtifact.close();
+    }
+  });
+
+  it("doctor remote still rejects unnegated prohibited claims", async () => {
+    const root = await makeTempRoot();
+    expect(runCli(["init", "--root", root]).status).toBe(0);
+    const contextPath = path.join(root, "sitectx.json");
+    const context = await readJson(contextPath);
+    context.claims = [
+      {
+        id: "claim:bad",
+        statement: "SiteCTX is a model training license."
+      }
+    ];
+    await fs.writeFile(contextPath, `${JSON.stringify(context, null, 2)}\n`, "utf8");
+    const site = await startStaticSite(root);
+    try {
+      const result = await runCliAsync(["doctor", site.url, "--allow-remote-origin", site.origin]);
+
+      expect(result.status).not.toBe(0);
+      expect(result.stdout).toContain("SiteCTX must not be described as model training license");
+    } finally {
+      await site.close();
     }
   });
 
