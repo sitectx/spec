@@ -73,6 +73,7 @@ export async function discoverSite(options = {}) {
     : await fs.mkdtemp(path.join(os.tmpdir(), "sitectx-discovery-"));
   const preserveWorkdir = Boolean(options.keepWorkdir || explicitWorkdir);
   const warnings = [];
+  const notices = [];
   const skipped = [];
   const queued = [];
   const includedUrls = new Set();
@@ -92,7 +93,7 @@ export async function discoverSite(options = {}) {
     message: "Looking for sitemaps",
     url: base.origin
   });
-  const sitemapUrls = await fetchSitemapCandidates(base, { timeout, maxBytes, policy: fetchPolicy, warnings, robots, preset });
+  const sitemapUrls = await fetchSitemapCandidates(base, { timeout, maxBytes, policy: fetchPolicy, warnings, notices, robots, preset });
   emitProgress(options, {
     stage: "queue",
     message: sitemapUrls.length > 0
@@ -258,6 +259,7 @@ export async function discoverSite(options = {}) {
   }
 
   const allWarnings = uniqueStrings([...warnings, ...extracts.flatMap((entry) => entry.record.warnings)]);
+  const allNotices = uniqueStrings(notices);
   emitProgress(options, {
     stage: "build",
     message: "Building SiteCTX draft",
@@ -275,6 +277,7 @@ export async function discoverSite(options = {}) {
     pagesIncluded: extracts.length,
     pagesSkipped: skipped.length,
     robots,
+    notices: allNotices,
     warnings: allWarnings
   };
   const config = buildDraftConfig({
@@ -297,6 +300,7 @@ export async function discoverSite(options = {}) {
     extracts,
     crawlManifest,
     config,
+    notices: allNotices,
     warnings: allWarnings
   });
 
@@ -323,6 +327,7 @@ export async function discoverSite(options = {}) {
     config,
     crawlManifest,
     workdir: preserveWorkdir ? workdir : null,
+    notices: allNotices,
     warnings: allWarnings
   };
 
@@ -563,7 +568,7 @@ async function fetchRobots(base, { timeout, maxBytes, policy }) {
   };
 }
 
-async function fetchSitemapCandidates(base, { timeout, maxBytes, policy, warnings, robots, preset }) {
+async function fetchSitemapCandidates(base, { timeout, maxBytes, policy, warnings, notices, robots, preset }) {
   const seedUrls = uniqueStrings([
     ...(robots?.sitemapUrls || []),
     new URL("/sitemap.xml", base.origin).toString(),
@@ -572,6 +577,7 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, policy, warning
   ]);
   const pageUrls = [];
   const seenSitemaps = new Set();
+  let readableSitemaps = 0;
 
   async function readSitemap(sitemapUrl, depth) {
     if (depth > MAX_SITEMAP_DEPTH) {
@@ -588,9 +594,6 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, policy, warning
     seenSitemaps.add(normalizedSitemapUrl);
     const result = await fetchPage(normalizedSitemapUrl, { timeout, maxBytes, acceptAnyText: true, policy });
     if (!result.ok || result.status >= 400) {
-      if (depth === 0) {
-        warnings.push(`Sitemap not found or not readable: ${displayCrawlPath(normalizedSitemapUrl)}`);
-      }
       return;
     }
     if (!looksLikeXmlSitemap(result)) {
@@ -599,6 +602,7 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, policy, warning
       }
       return;
     }
+    readableSitemaps += 1;
     const locs = parseSitemapLocs(result.body);
     if (isSitemapIndex(result.body)) {
       const childSitemaps = rankSitemapUrls(locs, base, preset)
@@ -626,6 +630,11 @@ async function fetchSitemapCandidates(base, { timeout, maxBytes, policy, warning
 
   for (const sitemapUrl of seedUrls) {
     await readSitemap(sitemapUrl, 0);
+  }
+  if (readableSitemaps === 0) {
+    notices.push("No sitemap found; continued with crawl discovery.");
+  } else if (pageUrls.length === 0) {
+    notices.push("No sitemap page URLs found; continued with crawl discovery.");
   }
   return rankSitemapUrls([...new Set(pageUrls)], base, preset);
 }
