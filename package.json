@@ -1,6 +1,6 @@
 {
   "name": "sitectx",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A CLI for publishing machine-readable website context with deterministic discovery, validation, and human review gates.",
   "license": "MIT",
   "author": "Scott May",

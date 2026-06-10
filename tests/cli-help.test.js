@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import packageJson from "../package.json" with { type: "json" };
 import { runCli } from "./helpers.js";
 
 describe("CLI help and version", () => {
@@ -42,7 +43,7 @@ describe("CLI help and version", () => {
     const result = runCli(["version"]);
 
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe("SiteCTX CLI 0.1.0");
+    expect(result.stdout.trim()).toBe(`SiteCTX CLI ${packageJson.version}`);
   });
 
   it("standard version flags print the raw package version", () => {
@@ -50,7 +51,7 @@ describe("CLI help and version", () => {
       const result = runCli([flag]);
 
       expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe("0.1.0");
+      expect(result.stdout.trim()).toBe(packageJson.version);
     }
   });
 
