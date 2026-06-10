@@ -16,6 +16,33 @@ export function formatRelativePath(filePath) {
   return filePath.replaceAll("\\", "/");
 }
 
+export function formatCheckResultStatus(result) {
+  const summary = result.summary || { warnings: 0, failures: 0 };
+  const warningText = pluralize(summary.warnings || 0, "warning");
+  const failureText = pluralize(summary.failures || 0, "failure");
+
+  if (!result.ok) {
+    if ((summary.failures || 0) > 0 && (summary.warnings || 0) > 0) {
+      return `FAIL with ${failureText} and ${warningText}`;
+    }
+    if ((summary.failures || 0) > 0) {
+      return `FAIL with ${failureText}`;
+    }
+    if (result.strict && (summary.warnings || 0) > 0) {
+      return `FAIL - warnings treated as errors (${warningText})`;
+    }
+    if ((summary.warnings || 0) > 0) {
+      return `FAIL with ${warningText}`;
+    }
+    return "FAIL";
+  }
+
+  if ((summary.warnings || 0) > 0) {
+    return `PASS with ${warningText}`;
+  }
+  return "PASS";
+}
+
 export function printCheckResult(title, result, target) {
   writeLine(title);
   if (target) {
@@ -30,20 +57,16 @@ export function printCheckResult(title, result, target) {
       writeLine(`     Hint: ${check.hint}`);
     }
   }
-  writeLine();
-  const warningText =
-    result.summary.warnings === 1
-      ? "1 warning"
-      : `${result.summary.warnings} warnings`;
-  const failureText =
-    result.summary.failures === 1
-      ? "1 failure"
-      : `${result.summary.failures} failures`;
-  if (result.summary.failures > 0) {
-    writeLine(`Result: FAIL with ${failureText}`);
-  } else if (result.summary.warnings > 0) {
-    writeLine(`Result: PASS with ${warningText}`);
-  } else {
-    writeLine("Result: PASS");
+  if (result.suggestions?.length > 0) {
+    writeLine();
+    for (const suggestion of result.suggestions) {
+      writeLine(`Suggestion: ${suggestion}`);
+    }
   }
+  writeLine();
+  writeLine(`Result: ${formatCheckResultStatus(result)}`);
+}
+
+function pluralize(count, singular) {
+  return count === 1 ? `1 ${singular}` : `${count} ${singular}s`;
 }

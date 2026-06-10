@@ -1,7 +1,10 @@
+import path from "node:path";
 import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS } from "../exit-codes.js";
 import { writeJson, writeLine } from "../output.js";
+import { findNearbyArtifactRoot, nearbyArtifactSuggestion } from "../artifact-root-suggestions.js";
 import { inspectLocal, inspectRemote } from "../../core/discovery.js";
+import { artifactPaths, fileExists } from "../../core/filesystem.js";
 
 export function registerInspectCommand(program) {
   program
@@ -25,6 +28,7 @@ Examples:
       const resolvedTarget = resolveInspectTarget(target, options);
       if (!resolvedTarget.ok) {
         const result = {
+          ok: false,
           target: "inspect",
           warnings: [resolvedTarget.message]
         };
@@ -35,6 +39,19 @@ Examples:
         }
         program._sitectxExitCode = EXIT_RUNTIME_ERROR;
         return;
+      }
+
+      if (!resolvedTarget.url) {
+        const preflight = await inspectLocalTargetPreflight(resolvedTarget.root);
+        if (!preflight.ok) {
+          if (options.json) {
+            writeJson(preflight.result);
+          } else {
+            printInspection(preflight.result);
+          }
+          program._sitectxExitCode = EXIT_RUNTIME_ERROR;
+          return;
+        }
       }
 
       const result = resolvedTarget.url
@@ -54,7 +71,7 @@ function resolveInspectTarget(target, options) {
   if (explicitTargets.length > 1) {
     return {
       ok: false,
-      message: "Use one target only. Try: sitectx inspect https://example.com or sitectx inspect ./public"
+      message: "Use one target only. Try: npx sitectx@latest inspect https://example.com or npx sitectx@latest inspect ./public"
     };
   }
   if (options.url) {
@@ -72,7 +89,7 @@ function resolveInspectTarget(target, options) {
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) {
     return {
       ok: false,
-      message: "Inspect only accepts http/https URLs or local paths. Try: sitectx inspect http://localhost:3000 or sitectx inspect ./public"
+      message: "Inspect only accepts http/https URLs or local paths. Try: npx sitectx@latest inspect http://localhost:3000 or npx sitectx@latest inspect ./public"
     };
   }
   return { ok: true, root: target };
@@ -82,9 +99,46 @@ function collect(value, previous) {
   return [...previous, value];
 }
 
+async function inspectLocalTargetPreflight(root = ".") {
+  const resolvedRoot = path.resolve(root || ".");
+  if (await fileExists(artifactPaths(resolvedRoot).manifest)) {
+    return { ok: true };
+  }
+
+  const result = {
+    ok: false,
+    target: resolvedRoot,
+    warnings: [".well-known/sitectx was not found."]
+  };
+  const nearby = await findNearbyArtifactRoot(resolvedRoot);
+  if (nearby) {
+    result.suggestions = [nearbyArtifactSuggestion(nearby.displayPath, "inspect")];
+  }
+  return { ok: false, result };
+}
+
 export function printInspection(result) {
   writeLine("SiteCTX inspect");
   writeLine();
+  if (result.ok === false) {
+    writeLine(`Target: ${result.target || ""}`);
+    if (result.warnings?.length) {
+      writeLine();
+      for (const warning of result.warnings) {
+        writeLine(`WARN ${warning}`);
+      }
+    }
+    if (result.suggestions?.length) {
+      writeLine();
+      for (const suggestion of result.suggestions) {
+        writeLine(`Suggestion: ${suggestion}`);
+      }
+    }
+    writeLine();
+    writeLine("Result: FAIL");
+    return;
+  }
+
   writeLine(`Target: ${result.target || ""}`);
   writeLine(`Site name: ${result.siteName || "unknown"}`);
   writeLine(`Site URL: ${result.siteUrl || "unknown"}`);

@@ -1,6 +1,7 @@
 import { Option } from "commander";
 import { EXIT_RUNTIME_ERROR, EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { printCheckResult, writeJson } from "../output.js";
+import { addNearbyArtifactSuggestion } from "../artifact-root-suggestions.js";
 import { doctorLocal, doctorRemote } from "../../core/doctor-checks.js";
 
 export function registerDoctorCommand(program) {
@@ -51,6 +52,9 @@ Examples:
       const result = resolvedTarget.url
         ? await doctorRemote({ ...options, url: resolvedTarget.url })
         : await doctorLocal({ ...options, root: resolvedTarget.root });
+      if (!resolvedTarget.url) {
+        await addNearbyArtifactSuggestion(result, resolvedTarget.root, "doctor");
+      }
 
       if (options.json) {
         writeJson(result);
@@ -66,7 +70,7 @@ function resolveDoctorTarget(target, options) {
   if (explicitTargets.length > 1) {
     return {
       ok: false,
-      message: "Use one target only. Try: sitectx doctor https://example.com or sitectx doctor ./public"
+      message: "Use one target only. Try: npx sitectx@latest doctor https://example.com or npx sitectx@latest doctor ./public"
     };
   }
   if (options.url) {
@@ -84,7 +88,7 @@ function resolveDoctorTarget(target, options) {
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) {
     return {
       ok: false,
-      message: "Doctor only accepts http/https URLs or local paths. Try: sitectx doctor http://localhost:3000 or sitectx doctor ./public"
+      message: "Doctor only accepts http/https URLs or local paths. Try: npx sitectx@latest doctor http://localhost:3000 or npx sitectx@latest doctor ./public"
     };
   }
   return { ok: true, root: target };
