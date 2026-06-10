@@ -18,6 +18,8 @@ const ACTIONS = {
   INSPECT: "inspect"
 };
 
+const CLI_RUNNER = "npx sitectx@latest";
+
 class WizardCancelled extends Error {
   constructor() {
     super("Wizard cancelled.");
@@ -175,9 +177,9 @@ async function runSetupFlow(prompts) {
   }
 
   printNextCommands([
-    `sitectx validate ${root}`,
-    `sitectx doctor ${root}`,
-    `sitectx inspect ${root}`
+    `${CLI_RUNNER} validate ${root}`,
+    `${CLI_RUNNER} doctor ${root}`,
+    `${CLI_RUNNER} inspect ${root}`
   ]);
   return EXIT_SUCCESS;
 }
@@ -225,8 +227,8 @@ async function runDiscoverFlow(prompts) {
   printWarnings(prompts, result.warnings);
   prompts.log.warn("Discovery output is draft_review_required and needs human review before publishing.");
   printNextCommands([
-    `sitectx review ${out}`,
-    `sitectx generate ${out} public --force`
+    `${CLI_RUNNER} review ${out}`,
+    `${CLI_RUNNER} generate ${out} public --force`
   ]);
   writeLine("Review gate: generate requires discovery.status=\"reviewed\" or --allow-draft.");
   return EXIT_SUCCESS;
@@ -292,9 +294,9 @@ async function runGenerateFlow(prompts) {
   }
 
   printNextCommands([
-    `sitectx validate ${out}`,
-    `sitectx doctor ${out}`,
-    `sitectx inspect ${out}`
+    `${CLI_RUNNER} validate ${out}`,
+    `${CLI_RUNNER} doctor ${out}`,
+    `${CLI_RUNNER} inspect ${out}`
   ]);
   return EXIT_SUCCESS;
 }

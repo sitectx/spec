@@ -26,9 +26,10 @@ export function buildProgram() {
     .addHelpText("after", `
 
 Zero-install quick start:
-  npx sitectx@latest init
-  npx sitectx@latest validate .
-  npx sitectx@latest doctor .
+  npx sitectx@latest init --root . --public-dir ./public
+  npx sitectx@latest validate ./public
+  npx sitectx@latest doctor ./public
+  npx sitectx@latest inspect ./public
 
 Existing app/static public dir:
   npx sitectx@latest init --root . --public-dir ./public

@@ -24,14 +24,15 @@ run a deployed doctor check after release.
 ## Quick Start
 
 ```bash
-npx sitectx@latest init
-npx sitectx@latest validate .
-npx sitectx@latest doctor .
-npx sitectx@latest inspect .
+npx sitectx@latest init --root . --public-dir ./public
+npx sitectx@latest validate ./public
+npx sitectx@latest doctor ./public
+npx sitectx@latest inspect ./public
 ```
 
 In an interactive terminal, `init` asks for the site URL and output location,
 discovers useful site signals, writes the files, and validates them.
+If you initialize into `./public`, validate `./public`, not the app root.
 
 ## Existing App
 
@@ -40,6 +41,8 @@ For a Next.js, Vite, Astro, or static app with a `public/` directory:
 ```bash
 npx sitectx@latest init --root . --public-dir ./public
 npx sitectx@latest validate ./public
+npx sitectx@latest doctor ./public
+npx sitectx@latest inspect ./public
 ```
 
 Generated public files go under `./public` so the app can serve them. The local
@@ -278,6 +281,19 @@ Missing public directory:
 Pass `--public-dir ./public` for app output. If no public directory is detected,
 SiteCTX writes to the selected root.
 
+Command says no SiteCTX artifacts found:
+If `init` wrote public artifacts into `./public`, run the command against that
+public output directory:
+
+```bash
+npx sitectx@latest validate ./public
+npx sitectx@latest doctor ./public
+npx sitectx@latest inspect ./public
+```
+
+The app root usually contains `sitectx.config.json`; the published JSON files
+live under the public output directory.
+
 Draft config needs review:
 Run `review sitectx.config.draft.json` before `generate`. Use
 `--allow-draft` only for test generation.
@@ -309,6 +325,9 @@ npm run check
 npm run pack:check
 node ./bin/sitectx.js --help
 ```
+
+Use `npm pack` to produce a fresh package artifact for smoke tests or release
+checks. Do not install stale checked-in tarballs.
 
 Tarball smoke test without installing SiteCTX into an app:
 

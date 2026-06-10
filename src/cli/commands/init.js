@@ -11,6 +11,8 @@ import { VERTICAL_PRESET_NAMES, applyPresetMetadata, normalizePreset, presetMeta
 import { inferSiteContext } from "../../core/site-inference.js";
 import { validateLocalArtifacts } from "../../core/validation.js";
 
+const CLI_RUNNER = "npx sitectx@latest";
+
 class InitWizardCancelled extends Error {
   constructor() {
     super("Init wizard cancelled.");
@@ -117,7 +119,7 @@ async function runInitWizard(options = {}) {
     printPromptChangeSummary(prompts, changes);
     const reviewedConfig = await reviewDetectedConfig(prompts, discovered.config);
     if (discovered.warnings?.length) {
-      prompts.log.warn(`${discovered.warnings.length} discovery warning${discovered.warnings.length === 1 ? "" : "s"}. Run sitectx discover ${siteUrl} for details.`);
+      prompts.log.warn(`${discovered.warnings.length} discovery warning${discovered.warnings.length === 1 ? "" : "s"}. Run ${CLI_RUNNER} discover ${siteUrl} for details.`);
     }
 
     const conflicts = await existingGeneratedFiles({
@@ -156,9 +158,9 @@ async function runInitWizard(options = {}) {
 
     writeLine();
     writeLine("Next commands:");
-    writeLine(`  sitectx validate ${root}`);
-    writeLine(`  sitectx doctor ${root}`);
-    writeLine(`  sitectx inspect ${root}`);
+    writeLine(`  ${CLI_RUNNER} validate ${root}`);
+    writeLine(`  ${CLI_RUNNER} doctor ${root}`);
+    writeLine(`  ${CLI_RUNNER} inspect ${root}`);
     prompts.outro("Done.");
     return EXIT_SUCCESS;
   } catch (error) {
@@ -412,6 +414,14 @@ function printInitResult(result, options) {
   }
   writeLine();
   writeLine(result.ok ? "Result: PASS" : "Result: FAIL");
+  if (result.ok && !options.dryRun) {
+    const target = commandTargetForPath(result.publicDir || result.root || ".");
+    writeLine();
+    writeLine("Next commands:");
+    writeLine(`  ${CLI_RUNNER} validate ${target}`);
+    writeLine(`  ${CLI_RUNNER} doctor ${target}`);
+    writeLine(`  ${CLI_RUNNER} inspect ${target}`);
+  }
 }
 
 async function removeLegacyUpdateArtifacts(publicDir, result) {
@@ -479,6 +489,18 @@ function initWritePlan(layout, files) {
 function displayRelativePath(root, target) {
   const relative = path.relative(root, target).replaceAll(path.sep, "/");
   return relative ? `./${relative}` : ".";
+}
+
+function commandTargetForPath(target) {
+  const resolved = path.resolve(target || ".");
+  const relative = path.relative(process.cwd(), resolved).replaceAll(path.sep, "/");
+  if (!relative) {
+    return ".";
+  }
+  if (!relative.startsWith("..") && !path.isAbsolute(relative)) {
+    return `./${relative}`;
+  }
+  return resolved.replaceAll(path.sep, "/");
 }
 
 function webAppPublicDirMessage(layout) {

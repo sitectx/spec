@@ -341,7 +341,7 @@ async function readConfigForSponsor(options) {
   const root = resolveRoot(options.root || ".");
   const configPath = path.resolve(root, options.config || "sitectx.config.json");
   if (!(await fileExists(configPath))) {
-    throw new Error(`${configPath} does not exist. Run sitectx init first.`);
+    throw new Error(`${configPath} does not exist. Run npx sitectx@latest init first.`);
   }
   const config = await loadConfig(configPath);
   return { configPath, config };
