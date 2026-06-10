@@ -16,6 +16,24 @@ SiteCTX is designed for production static publishing: generate the artifacts
 locally or in CI, serve them from your existing site, validate before deploy, and
 run a deployed doctor check after release.
 
+## What Problem Does SiteCTX Solve?
+
+Most automated systems learn about a website by crawling pages and guessing.
+That works poorly for actions, freshness, catalogs, important pages, and
+commercial disclosures.
+
+SiteCTX lets a site publish a reviewed context bundle:
+
+- who the site is
+- what the site is about
+- important pages and actions
+- recent updates
+- catalog pointers
+- optional disclosed sponsored context
+
+The output is static JSON that your existing site can serve from
+`/.well-known/sitectx` and `/sitectx.json`.
+
 ## Requirements
 
 - Node.js 20 or newer.
