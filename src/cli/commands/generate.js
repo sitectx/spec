@@ -153,6 +153,11 @@ function printGenerateResult(result, options) {
   for (const error of result.errors) {
     writeError(`ERROR ${error}`);
   }
+  if (result.errors.length > 0) {
+    writeError();
+    writeError(result.ok ? "Result: PASS" : "Result: FAIL");
+    return;
+  }
   writeLine();
   writeLine(result.ok ? "Result: PASS" : "Result: FAIL");
 }

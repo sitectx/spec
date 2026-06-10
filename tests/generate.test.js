@@ -272,4 +272,45 @@ describe("generate", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Config validation failed");
   });
+
+  it("prints generate errors before the final failure result", async () => {
+    const root = await makeTempRoot();
+    const draftPath = path.join(root, "sitectx.config.draft.json");
+    await fs.writeFile(
+      draftPath,
+      JSON.stringify(
+        {
+          siteUrl: "https://example.com",
+          name: "Draft Site",
+          description: "Draft config.",
+          language: "en",
+          publisher: { name: "Draft Site", url: "https://example.com" },
+          sections: [
+            {
+              id: "home",
+              title: "Home",
+              url: "https://example.com/",
+              summary: "Home."
+            }
+          ],
+          updates: [],
+          discovery: {
+            status: "draft_review_required",
+            source: "test"
+          }
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const result = runCli(["generate", "--config", draftPath, "--out", path.join(root, "public")]);
+
+    expect(result.status).toBe(1);
+    const errorIndex = result.stderr.indexOf("ERROR Discovered drafts require human review");
+    const resultIndex = result.stderr.indexOf("Result: FAIL");
+    expect(errorIndex).toBeGreaterThanOrEqual(0);
+    expect(resultIndex).toBeGreaterThan(errorIndex);
+  });
 });
