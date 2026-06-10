@@ -14,6 +14,32 @@ describe("validate", () => {
     expect(result.stdout).toContain("Result: PASS");
   });
 
+  it("suggests nearby public artifacts when validating an app root", async () => {
+    const root = await makeTempRoot();
+    await fs.mkdir(path.join(root, "public"));
+    expect(runCli(["init", "--root", ".", "--public-dir", "./public"], { cwd: root }).status).toBe(0);
+
+    const result = runCli(["validate", "."], { cwd: root });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Found SiteCTX artifacts under ./public");
+    expect(result.stdout).toContain("Try: npx sitectx@latest validate ./public");
+    expect(result.stdout).toContain("Result: FAIL");
+
+    const publicResult = runCli(["validate", "./public"], { cwd: root });
+    expect(publicResult.status).toBe(0);
+    expect(publicResult.stdout).not.toContain("Found SiteCTX artifacts under ./public");
+  });
+
+  it("does not suggest a public dir when no nearby artifacts exist", async () => {
+    const root = await makeTempRoot();
+
+    const result = runCli(["validate", "."], { cwd: root });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain("Found SiteCTX artifacts under");
+  });
+
   it("validate fails on invalid JSON", async () => {
     const root = await makeTempRoot();
     expect(runCli(["init", "--root", root]).status).toBe(0);

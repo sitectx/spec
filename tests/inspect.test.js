@@ -32,6 +32,40 @@ describe("inspect", () => {
     expect(result.stdout).toContain("Updates: 1");
   });
 
+  it("suggests nearby public artifacts when inspecting an app root", async () => {
+    const root = await makeTempRoot();
+    await fs.mkdir(path.join(root, "public"));
+    expect(runCli(["init", "--root", ".", "--public-dir", "./public"], { cwd: root }).status).toBe(0);
+
+    const result = runCli(["inspect", "."], { cwd: root });
+
+    expect(result.status).toBe(2);
+    expect(result.stdout).toContain("Found SiteCTX artifacts under ./public");
+    expect(result.stdout).toContain("Try: npx sitectx@latest inspect ./public");
+    expect(result.stdout).toContain("Result: FAIL");
+    expect(result.stdout).not.toContain("Site name: unknown");
+    expect(result.stdout).not.toContain("Spec version: unknown");
+
+    const publicResult = runCli(["inspect", "./public"], { cwd: root });
+    expect(publicResult.status).toBe(0);
+    expect(publicResult.stdout).toContain("Site name: Example Site");
+    expect(publicResult.stdout).not.toContain("Found SiteCTX artifacts under ./public");
+  });
+
+  it("inspect --json reports app-root recovery suggestions as a failure", async () => {
+    const root = await makeTempRoot();
+    await fs.mkdir(path.join(root, "public"));
+    expect(runCli(["init", "--root", ".", "--public-dir", "./public"], { cwd: root }).status).toBe(0);
+
+    const result = runCli(["inspect", ".", "--json"], { cwd: root });
+    const parsed = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.suggestions).toContain("Found SiteCTX artifacts under ./public. Try: npx sitectx@latest inspect ./public");
+    expect(parsed.siteName).toBeUndefined();
+  });
+
   it("inspect --json returns discovery fields", async () => {
     const root = await makeTempRoot();
     expect(runCli(["init", "--root", root]).status).toBe(0);

@@ -1,6 +1,7 @@
 import { Option } from "commander";
 import { EXIT_SUCCESS, EXIT_VALIDATION_FAILED } from "../exit-codes.js";
 import { printCheckResult, writeJson } from "../output.js";
+import { addNearbyArtifactSuggestion } from "../artifact-root-suggestions.js";
 import { validateLocalArtifacts } from "../../core/validation.js";
 
 export function registerValidateCommand(program) {
@@ -22,11 +23,13 @@ export function registerValidateCommand(program) {
     .addHelpText("after", `
 
 Examples:
-  npx sitectx@latest validate .
   npx sitectx@latest validate ./public
+  npx sitectx@latest validate .
 `)
     .action(async (root, options) => {
-      const result = await validateLocalArtifacts({ ...options, root: options.root || root || "." });
+      const validationRoot = options.root || root || ".";
+      const result = await validateLocalArtifacts({ ...options, root: validationRoot });
+      await addNearbyArtifactSuggestion(result, validationRoot, "validate");
       if (options.json) {
         writeJson(result);
       } else {

@@ -15,6 +15,24 @@ describe("doctor local", () => {
     expect(result.stdout).toContain("Result: PASS with 1 warning");
   });
 
+  it("suggests nearby public artifacts when running doctor from an app root", async () => {
+    const root = await makeTempRoot();
+    await fs.mkdir(path.join(root, "public"));
+    expect(runCli(["init", "--root", ".", "--public-dir", "./public"], { cwd: root }).status).toBe(0);
+
+    const result = runCli(["doctor", "."], { cwd: root });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Found SiteCTX artifacts under ./public");
+    expect(result.stdout).toContain("Try: npx sitectx@latest doctor ./public");
+    expect(result.stdout).toContain("Result: FAIL");
+    expect(result.stdout).not.toContain("Result: PASS");
+
+    const publicResult = runCli(["doctor", "./public"], { cwd: root });
+    expect(publicResult.status).toBe(0);
+    expect(publicResult.stdout).not.toContain("Found SiteCTX artifacts under ./public");
+  });
+
   it("doctor --root --strict exits nonzero when warnings are present", async () => {
     const root = await makeTempRoot();
     expect(runCli(["init", "--root", root]).status).toBe(0);
@@ -23,6 +41,26 @@ describe("doctor local", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("HTTP reachability and content-type headers were not checked");
+    expect(result.stdout).toContain("npx sitectx@latest doctor https://example.com");
+    expect(result.stdout).not.toContain("doctor --url");
+    expect(result.stdout).toContain("Result: FAIL - warnings treated as errors (1 warning)");
+    expect(result.stdout).not.toContain("Result: PASS");
+  });
+
+  it("doctor --root --strict JSON agrees with failing human status", async () => {
+    const root = await makeTempRoot();
+    expect(runCli(["init", "--root", root]).status).toBe(0);
+
+    const json = runCli(["doctor", "--root", root, "--strict", "--json"]);
+    const human = runCli(["doctor", "--root", root, "--strict"]);
+    const parsed = JSON.parse(json.stdout);
+
+    expect(json.status).toBe(1);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.summary.warnings).toBe(1);
+    expect(parsed.summary.failures).toBe(0);
+    expect(human.status).toBe(1);
+    expect(human.stdout).not.toContain("Result: PASS");
   });
 
   it("doctor unsupported URL schemes fail cleanly", () => {

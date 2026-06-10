@@ -40,7 +40,7 @@ export async function doctorLocal(options = {}) {
     "local.http",
     path.resolve(options.root || "."),
     "HTTP reachability and content-type headers were not checked in local mode.",
-    "Run doctor --url after deploying the artifacts."
+    "Run npx sitectx@latest doctor https://example.com after deploying the artifacts."
   );
   addClaimChecks(collector, "local artifacts", validation.checks.map((check) => check.message).join("\n"));
 
