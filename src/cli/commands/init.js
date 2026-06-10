@@ -99,11 +99,20 @@ async function runInitWizard(options = {}) {
     if (isLocalhostSiteUrl(siteUrl)) {
       prompts.log.warn(localhostSiteUrlWarning());
     }
+    const preset = await askSelect(prompts, {
+      message: "Site type",
+      options: VERTICAL_PRESET_NAMES.map((name) => ({
+        value: name,
+        label: presetMetadata(name).label
+      })),
+      initialValue: options.preset || "auto"
+    });
 
     const discoverySpinner = prompts.spinner();
     discoverySpinner.start("Preparing discovery");
     const discovered = await discoverForInit(siteUrl, {
       ...options,
+      preset,
       onProgress: createSpinnerProgressReporter(discoverySpinner)
     });
     stopSpinner(
@@ -181,10 +190,13 @@ export async function discoverForInit(siteUrl, options = {}) {
       maxPages: options.maxPages || 8,
       maxDepth: options.maxDepth || 1,
       timeout: options.timeout || 7000,
-      delayMs: 50,
+      delayMs: options.delayMs ?? 50,
       preset,
       onProgress: options.onProgress
     });
+    if (!discovery.ok) {
+      throw new Error(discovery.errors?.[0] || "Could not discover site pages.");
+    }
     return {
       ok: true,
       config: starterConfigFromDiscovery(discovery.config),

@@ -3,7 +3,7 @@ import https from "node:https";
 import dns from "node:dns/promises";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createRemoteFetchPolicy, fetchText, validateRemoteFetchUrl } from "../src/core/remote-fetch.js";
+import { createRemoteFetchPolicy, fetchText, fetchWithPinnedLookup, validateRemoteFetchUrl } from "../src/core/remote-fetch.js";
 import { closeServer, listenLocalhost, localServerOrigin } from "./helpers.js";
 
 afterEach(() => {
@@ -86,9 +86,32 @@ describe("remote fetch policy", () => {
     expect(requestSpy).toHaveBeenCalledOnce();
     expect(requestSpy.mock.calls[0][0]).toMatchObject({
       hostname: "example.com",
-      servername: "example.com"
+      servername: "example.com",
+      headers: expect.objectContaining({
+        "user-agent": expect.stringContaining("SiteCTX")
+      })
     });
     expect(lookupResult).toEqual({ error: null, address: validatedAddress, family: 4 });
+  });
+
+  it("identifies pinned requests with a User-Agent", async () => {
+    const site = await startRoutes({
+      "/": (request, response) => {
+        const userAgent = request.headers["user-agent"] || "";
+        response.statusCode = userAgent.includes("SiteCTX") ? 200 : 403;
+        response.end(userAgent);
+      }
+    });
+    try {
+      const response = await fetchWithPinnedLookup(site.origin, {
+        address: "127.0.0.1",
+        family: 4
+      });
+
+      expect(response.status).toBe(200);
+    } finally {
+      await site.close();
+    }
   });
 
   it("follows same-origin redirects manually", async () => {
