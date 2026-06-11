@@ -41,16 +41,30 @@ The output is static JSON that your existing site can serve from
 
 ## Quick Start
 
+From your website project:
+
 ```bash
-npx sitectx@latest init --root . --public-dir ./public
+npx sitectx@latest init
+```
+
+In an interactive terminal, `init` walks you through the setup, detects common
+app layouts, discovers useful site signals, writes the public JSON files, and
+validates the result.
+
+After it finishes, run the checks it suggests. For most apps with a `public/`
+directory:
+
+```bash
 npx sitectx@latest validate ./public
 npx sitectx@latest doctor ./public
 npx sitectx@latest inspect ./public
 ```
 
-In an interactive terminal, `init` asks for the site URL and output location,
-discovers useful site signals, writes the files, and validates them.
-If you initialize into `./public`, validate `./public`, not the app root.
+If you already know your output directory, you can skip the prompts:
+
+```bash
+npx sitectx@latest init --root . --public-dir ./public
+```
 
 ## Existing App
 
